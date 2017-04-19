@@ -10,14 +10,18 @@ int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		freopen("output.out", "w", stdout);
+		//freopen("output.out", "w", stdout);
 	#endif
     int i,j,k;
     int caseNumber = 1;
     while(1){
         /*Get input, store in arrays*/
-        char instructions[50][20][20] = {'\0'}; /*1000 lines , every line 20 token and every string 20 words*/
+        char instructions[50][15][20] = {'\0'}; /*1000 lines , every line 20 token and every string 20 words*/
+       // memset(instructions, '\0', sizeof(instructions));
+
         char buffer[BUFFERSIZE] = {'\0'};
+      //  memset(buffer, '\0', sizeof(buffer));
+
         int lineCounter = 0;
         while( fgets(buffer, BUFFERSIZE , stdin) ) {
             if(buffer[0] == '$')break;
@@ -31,6 +35,7 @@ int main()
                 tokenCounter++;
             }
             lineCounter++;
+            memset(buffer, '\0', sizeof(buffer));
         }
         if(lineCounter == 0) break;
         #ifndef DEBUG_MESSAGE
@@ -42,8 +47,14 @@ int main()
         #endif
         /*Construct modules' name and addr*/
         char modulesName[50][15] = {'\0'};
+       // memset(modulesName, '\0', sizeof(modulesName));
+
         char sortedName[50][15] = {'\0'};
+        //memset(sortedName, '\0', sizeof(sortedName));
+
         int modulesAddr[50] = {0};
+       // memset(modulesAddr, 0, sizeof(modulesAddr));
+
         int memLocate = 256;
         int mpt = -1;
         for(i = 0; i < lineCounter; i++){
@@ -62,8 +73,14 @@ int main()
         }
         /*Construct externals' name and addr for every modules*/
         char externalsName[50][50][15] = {'\0'};
+        //memset(externalsName, '\0', sizeof(externalsName));
+
         int externalsAddr[50][50] = {0};
+        //memset(externalsAddr, 0, sizeof(externalsAddr));
+
         int externalsNumber[50] = {0};
+        //memset(externalsNumber, 0, sizeof(externalsNumber));
+
         int modulesNumber = mpt+1;
         mpt = -1;
         int ept = 0;
@@ -146,7 +163,7 @@ int main()
         printf("CheckSum: %04X\n", checkSum);
         #endif
         /*Computer checksum, and sorted modulesName array*/
-        qsort(sortedName, modulesNumber, sizeof(char)*10, cmp);
+        qsort(sortedName, modulesNumber, sizeof(char)*15, cmp);
 
         /*Show*/
         /*The undefined symbol's addr is -1 which means ????*/
@@ -155,6 +172,7 @@ int main()
         printf(" SYMBOL   ADDR\n");
         printf("--------  ----\n");
         for(i = 0; i < modulesNumber; i++){
+                //printf("sN: %s\n", modulesName[i]);
             if(i != 0) if(strcmp(sortedName[i], sortedName[i-1]) == 0) continue;
 
             for(j = 0; j < modulesNumber; j++){
