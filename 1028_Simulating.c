@@ -1,7 +1,7 @@
 /*1028 - Carl the Ant*/
 #include <stdio.h>
 #include <limits.h>
-#define DEBUG_MESSAGE
+//#define DEBUG_MESSAGE
 typedef enum {N, U, D, L, R}Direction;
 const int dx[5] = {0, 0, 0, -1, 1};
 const int dy[5] = {0, 1, -1, 0, 0};
@@ -10,12 +10,15 @@ typedef struct {
     int CarlPassTimes;
     int d;
     int antHere;
+    int antArrived;
     int isIntersection;
 } road;
 typedef struct {
     int hx, hy;
+    int ux, uy;
     int tx, ty;
     int isMoved;
+    int isStayed;
     int spawnTime;
     int waitTime; /*in intersection*/
     int isArrived;
@@ -24,12 +27,14 @@ typedef struct {
 void ConstructMap(road map[mapSize][mapSize], int edgesNumber);
 void spawnAnt(road map[mapSize][mapSize], int antsNumber, ant ants[antsNumber], int* antsSpawn, int clock);
 void UpdataAnts(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int clock, int* antsArrived, int arriveOrder[antsNumber] );
+void StayAnt(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int clock);
+void MoveAnt(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int nextX, int nextY );
 int endX, endY;
 int CarlTime = 0;
 int main ()
 {
     #ifndef ONLINE_JUDGE
-		freopen("input.in", "r", stdin);
+		//freopen("input.in", "r", stdin);
 		//freopen("output.out", "w", stdout);
 	#endif
 	int i,j,k;
@@ -67,30 +72,55 @@ int main ()
         int arriveOrder[antsNumber];
         while(antsArrived < antsNumber){
             #ifndef DEBUG_MESSAGE
-            printf("clock: %d\n", clock);
+            printf("-------Clock: %d-------\n", clock);
             #endif
             /*Spawn a new ant when interval time out.*/
             /*Update old ants' location*/
-            for(i = 0; i < antsSpawn; i++){
-                if(ants[i].isMoved == 0 && ants[i].isArrived == 0){
-                    UpdataAnts(i, antsNumber, ants, map, clock, &antsArrived, arriveOrder);
-                }
-            }
             if(clock % respawnTime == 0 && shouldSpawn < antsNumber){
                 shouldSpawn++;
             }
             if(map[100][100].antHere == -1 && antsSpawn < shouldSpawn){
                 spawnAnt(map, antsNumber, ants, &antsSpawn, clock);
             }
+            for(i = 0; i < antsSpawn; i++){
+                #ifndef DEBUG_MESSAGE
+                printf("  Start: %d\n", i);
+                #endif
+                if(ants[i].isMoved == 0 && ants[i].isArrived == 0){
+                    UpdataAnts(i, antsNumber, ants, map, clock, &antsArrived, arriveOrder);
+                    #ifndef DEBUG_MESSAGE
+                    printf("  Finish: %d\n\n", i);
+                    #endif
+                }
+            }
 
             for(i = 0; i < antsSpawn; i++){
+                if(ants[i].isArrived) continue;
+                if(ants[i].ux == -1 && ants[i].uy == -1){
+                    ants[i].isMoved = 0;
+                    continue;
+                }
+                if(map[ants[i].hx][ants[i].hy].antHere == i) map[ants[i].hx][ants[i].hy].antHere = -1;
+                if(i == 0 && (ants[i].hx != ants[i].ux || ants[i].hy != ants[i].uy)) {
+                    if(map[ants[i].hx][ants[i].hy].isIntersection && map[ants[i].hx][ants[i].hy].CarlPassTimes == 1){
+                        map[ants[i].hx][ants[i].hy].d = 1;
+                    }
+                    else map[ants[i].hx][ants[i].hy].CarlPassTimes = 1;
+                }
+                if((ants[i].hx != ants[i].ux || ants[i].hy != ants[i].uy))  ants[i].waitTime = INT_MAX;
+                ants[i].hx = ants[i].ux;
+                ants[i].hy = ants[i].uy;
+                map[ants[i].ux][ants[i].uy].antHere = i;
+                map[ants[i].ux][ants[i].uy].antArrived = -1;
                 ants[i].isMoved = 0;
+                ants[i].isStayed = 0;
             }
             clock++;
         }
 
 
         /*Show result*/
+        if(caseNumber > 1)printf("\n");
         printf("Case %d:\n", caseNumber);
         printf("Carl finished the path at time %d\n", CarlTime);
         printf("The ants finished in the following order:\n");
@@ -100,178 +130,137 @@ int main ()
             printf(" %d", arriveOrder[i]);
         }printf("\n");
 
-        printf("The last ant finished the path at time %d\n", clock-1);
+        printf("The last ant finished the path at time %d\n", clock);
         caseNumber++;
     }
 }
 
+void StayAnt(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int clock)
+{
+    #ifndef DEBUG_MESSAGE
+    printf("Stay:%d\n", antUpdating);
+    system("PAUSE");
+    #endif
+    if (ants[antUpdating].waitTime == INT_MAX && map[ants[antUpdating].ux][ants[antUpdating].uy].isIntersection){
+        ants[antUpdating].waitTime = clock;
+    }
+    ants[antUpdating].ux = ants[antUpdating].hx;
+    ants[antUpdating].uy = ants[antUpdating].hy;
+    ants[antUpdating].isMoved = 1;
+    ants[antUpdating].isStayed = 1;
+    if(map[ants[antUpdating].hx][ants[antUpdating].hy].antArrived != -1 && ants[map[ants[antUpdating].hx][ants[antUpdating].hy].antArrived].isStayed==0) StayAnt(map[ants[antUpdating].hx][ants[antUpdating].hy].antArrived, antsNumber, ants, map, clock);
+    map[ants[antUpdating].hx][ants[antUpdating].hy].antArrived = antUpdating;
+    return;
+}
+
+void MoveAnt(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int nextX, int nextY)
+{
+    #ifndef DEBUG_MESSAGE
+    printf("Move:%d\n", antUpdating);
+    printf("         next: (%d: %d)\n", nextX, nextY);
+    #endif
+
+    map[nextX][nextY].antArrived = antUpdating;
+    ants[antUpdating].ux = nextX;
+    ants[antUpdating].uy = nextY;
+    ants[antUpdating].isMoved = 1;
+    return;
+}
 void UpdataAnts(int antUpdating, int antsNumber, ant ants[antsNumber], road map[mapSize][mapSize], int clock, int* antsArrived, int arriveOrder[antsNumber])
 {
     #ifndef DEBUG_MESSAGE
     printf("\nAnt:%d\n", antUpdating);
     #endif
-
-    /*Check goal*/
-    /*Check the next road have ant or not*/
-        /*Yes -> update the ant*/
-        /*NO  -> Check the road is intersection or not*/
-            /*Yes -> Compare to another direction's ant*/
-            /*No -> move*/
+    /*If no ant in the next location, move ant*/
+    /*Else if is not in a intersection, stay ant */
+    /*Else compare two ant, winner move and loser stay*/
+    ants[antUpdating].isMoved = 1;
     if(ants[antUpdating].hx == endX && ants[antUpdating].hy == endY){
-
         map[endX][endY].antHere = -1;
-        map[ants[antUpdating].tx][ants[antUpdating].ty].antHere = -1;
         ants[antUpdating].isArrived = 1;
         ants[antUpdating].isMoved = 1;
         arriveOrder[*antsArrived] = antUpdating;
         (*antsArrived)++;
-        if(*antsArrived == 1) CarlTime = clock;
+        if(*antsArrived == 1) CarlTime = clock+1;
         #ifndef DEBUG_MESSAGE
         printf("Arrive %d:\n", *antsArrived);
-        printf("Ant:%d  time: %d isArrived: %d\n", antUpdating, clock, ants[antUpdating].isArrived);
+        printf("Ant:%d  time: %d isArrived: %d\n", antUpdating, clock+1, ants[antUpdating].isArrived);
         #endif
 
         return;
     }
     else {
+
         Direction nextD;
         if(antUpdating == 0) nextD = map[ants[antUpdating].hx][ants[antUpdating].hy].direction[map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes];
         else nextD = map[ants[antUpdating].hx][ants[antUpdating].hy].direction[map[ants[antUpdating].hx][ants[antUpdating].hy].d];
         int nextX = ants[antUpdating].hx + dx[nextD], nextY = ants[antUpdating].hy + dy[nextD];
+        ants[antUpdating].ux = nextX;
+        ants[antUpdating].uy = nextY;
         #ifndef DEBUG_MESSAGE
         printf("Update:\n");
         printf("Ant %d:  head: (%d: %d) tail: (%d %d)\n", antUpdating, ants[antUpdating].hx, ants[antUpdating].hy, ants[antUpdating].tx, ants[antUpdating].ty);
         printf("         next: (%d: %d) nextD: %d\n", nextX, nextY, nextD);
+        printf("         waitTime: %d\n", ants[antUpdating].waitTime);
+        printf("         nextArrived: %d isIntersection: %d\n", map[nextX][nextY].antArrived, map[nextX][nextY].isIntersection);
         //system("PAUSE");
         #endif
-
-
-        if (map[nextX][nextY].antHere != -1){
-            //printf("u: %d %d\n", map[ants[antUpdating].hx][ants[antUpdating].hy].direction[0], map[ants[antUpdating].hx][ants[antUpdating].hy].direction[1]);
-            if(ants[map[nextX][nextY].antHere].isMoved == 0) UpdataAnts(map[nextX][nextY].antHere, antsNumber, ants, map, clock, antsArrived, arriveOrder);
-        }
-        if (map[nextX][nextY].antHere != -1){ /*means block*/
-            if (map[nextX][nextY].isIntersection == 1 && ants[antUpdating].waitTime == INT_MAX){
-                ants[antUpdating].waitTime = clock;
-            }
-            ants[antUpdating].isMoved = 1;
+        if (map[nextX][nextY].antArrived == -1){
+            /*Move*/
+            MoveAnt(antUpdating, antsNumber, ants, map, nextX, nextY);
             return;
         }
         else {
-            if (map[nextX][nextY].isIntersection == 1){
-                Direction anotherD;
-                if(nextD == map[nextX][nextY].direction[0])
-                    anotherD = map[nextX][nextY].direction[1];
-                else
-                    anotherD = map[nextX][nextY].direction[0];
-                int anoX = nextX - dx[anotherD], anoY = nextY - dy[anotherD];
-
-                if(map[anoX][anoY].antHere != -1 && ants[map[anoX][anoY].antHere].isMoved == 0){
-                    if(ants[map[anoX][anoY].antHere].waitTime != ants[antUpdating].waitTime){
-                        if(ants[map[anoX][anoY].antHere].waitTime < ants[antUpdating].waitTime){
-                            if (ants[antUpdating].waitTime == INT_MAX){
-                                ants[antUpdating].waitTime = clock;
-                            }
-                            ants[antUpdating].isMoved = 1;
-
-                        }
-                        else {
-                            map[nextX][nextY].antHere = antUpdating;
-                            if (antUpdating == 0) {
-                                if(map[ants[antUpdating].hx][ants[antUpdating].hy].isIntersection && map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes == 1){
-                                    map[ants[antUpdating].hx][ants[antUpdating].hy].d = 1;
-                                }
-                                else map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes = 1;
-
-                            }
-                            if(!(ants[antUpdating].hx == 100 && ants[antUpdating].hy ==100))map[ants[antUpdating].tx][ants[antUpdating].ty].antHere = -1;
-                            ants[antUpdating].tx = ants[antUpdating].hx;
-                            ants[antUpdating].ty = ants[antUpdating].hy;
-                            ants[antUpdating].hx = nextX;
-                            ants[antUpdating].hy = nextY;
-                            ants[antUpdating].isMoved = 1;
-                            ants[antUpdating].waitTime = INT_MAX;
-                            return;
-                        }
-                    }
-                    else { /*The same waitTime between two ants.*/
-                        if(ants[map[anoX][anoY].antHere].spawnTime < ants[antUpdating].spawnTime){
-                            if (ants[antUpdating].waitTime == INT_MAX){
-                                ants[antUpdating].waitTime = clock;
-                            }
-                            ants[antUpdating].isMoved = 1;
-
-                        }
-                        else {
-                            map[nextX][nextY].antHere = antUpdating;
-                            if (antUpdating == 0) {
-                                if(map[ants[antUpdating].hx][ants[antUpdating].hy].isIntersection && map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes == 1){
-                                    map[ants[antUpdating].hx][ants[antUpdating].hy].d = 1;
-                                }
-                                else map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes = 1;
-
-                            }
-                            if(!(ants[antUpdating].hx == 100 && ants[antUpdating].hy ==100))map[ants[antUpdating].tx][ants[antUpdating].ty].antHere = -1;
-                            ants[antUpdating].tx = ants[antUpdating].hx;
-                            ants[antUpdating].ty = ants[antUpdating].hy;
-                            ants[antUpdating].hx = nextX;
-                            ants[antUpdating].hy = nextY;
-                            ants[antUpdating].isMoved = 1;
-                            ants[antUpdating].waitTime = INT_MAX;
-                            return;
-                        }
-
-                    }
-                }
-                else {
-                    map[nextX][nextY].antHere = antUpdating;
-                    if (antUpdating == 0) {
-                        if(map[ants[antUpdating].hx][ants[antUpdating].hy].isIntersection && map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes == 1){
-                            map[ants[antUpdating].hx][ants[antUpdating].hy].d = 1;
-                        }
-                        else map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes = 1;
-
-                    }
-                    if(!(ants[antUpdating].hx == 100 && ants[antUpdating].hy ==100))map[ants[antUpdating].tx][ants[antUpdating].ty].antHere = -1;
-                    ants[antUpdating].tx = ants[antUpdating].hx;
-                    ants[antUpdating].ty = ants[antUpdating].hy;
-                    ants[antUpdating].hx = nextX;
-                    ants[antUpdating].hy = nextY;
-                    ants[antUpdating].isMoved = 1;
-                    ants[antUpdating].waitTime = INT_MAX;
-                    return;
-                }
+            if(map[nextX][nextY].isIntersection != 1){
+                /*Stay*/
+                StayAnt(antUpdating, antsNumber, ants, map, clock);
             }
             else {
-                map[nextX][nextY].antHere = antUpdating;
-                if (antUpdating == 0) {
-                    if(map[ants[antUpdating].hx][ants[antUpdating].hy].isIntersection && map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes == 1){
-                        map[ants[antUpdating].hx][ants[antUpdating].hy].d = 1;
+                int anoAnt = map[nextX][nextY].antArrived;
+                #ifndef DEBUG_MESSAGE
+                printf("Intersection ants: %d v.s %d:\n", antUpdating, map[nextX][nextY].antArrived);
+                printf("             wait: %d v.s %d\n", ants[antUpdating].waitTime, ants[anoAnt].waitTime);
+                #endif
+                if(ants[anoAnt].waitTime != ants[antUpdating].waitTime){
+                    if(ants[anoAnt].waitTime < ants[antUpdating].waitTime){
+                        StayAnt(antUpdating, antsNumber, ants, map, clock);
                     }
-                    else map[ants[antUpdating].hx][ants[antUpdating].hy].CarlPassTimes = 1;
+                    else {
+                        StayAnt(map[nextX][nextY].antArrived, antsNumber, ants, map, clock);
+                       return;
+                    }
+                }
+                else { /*The same waitTime between two ants.*/
+                    if(ants[anoAnt].spawnTime < ants[antUpdating].spawnTime){
+                        StayAnt(antUpdating, antsNumber, ants, map, clock);
+                    }
+                    else {
+                        StayAnt(map[nextX][nextY].antArrived, antsNumber, ants, map, clock);
+                        return;
+                    }
 
                 }
-                if(!(ants[antUpdating].hx == 100 && ants[antUpdating].hy ==100))map[ants[antUpdating].tx][ants[antUpdating].ty].antHere = -1;
-                ants[antUpdating].tx = ants[antUpdating].hx;
-                ants[antUpdating].ty = ants[antUpdating].hy;
-                ants[antUpdating].hx = nextX;
-                ants[antUpdating].hy = nextY;
-                ants[antUpdating].isMoved = 1;
-                ants[antUpdating].waitTime = INT_MAX;
-                return;
             }
         }
+
+
+
     }
 }
 void spawnAnt(road map[mapSize][mapSize], int antsNumber, ant ants[antsNumber], int* antsSpawn, int clock)
 {
     #ifndef DEBUG_MESSAGE
-    printf("---Spawn: %d\n", *antsSpawn);
+    printf("       Spawn: %d\n", *antsSpawn);
     #endif
     map[100][100].antHere = *antsSpawn;
     ants[*antsSpawn].hx = 100;
     ants[*antsSpawn].hy = 100;
-    ants[*antsSpawn].isMoved = 1;
+    ants[*antsSpawn].ux = -1;
+    ants[*antsSpawn].uy = -1;
+    ants[*antsSpawn].tx = 100;
+    ants[*antsSpawn].ty = 100;
+    ants[*antsSpawn].isMoved = 0;
+    ants[*antsSpawn].isStayed = 0;
     ants[*antsSpawn].spawnTime = clock;
     ants[*antsSpawn].waitTime = INT_MAX;
     ants[*antsSpawn].isArrived = 0;
@@ -289,6 +278,7 @@ void ConstructMap(road map[mapSize][mapSize], int edgesNumber)
             map[i][j].direction[1] = N;
             map[i][j].isIntersection = 0;
             map[i][j].d = 0;
+            map[i][j].antArrived = -1;
         }
     }
     int px = 100, py = 100;
