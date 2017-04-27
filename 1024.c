@@ -16,11 +16,11 @@ int main()
     int caseNumber = 1;
     while(1){
         /*Get input, store in arrays*/
-        char instructions[50][15][20] = {'\0'}; /*1000 lines , every line 20 token and every string 20 words*/
-       // memset(instructions, '\0', sizeof(instructions));
+        char instructions[50][20][15] = {'\0'}; /*1000 lines , every line 20 token and every string 20 words*/
+        memset(instructions, '\0', sizeof(instructions));
 
         char buffer[BUFFERSIZE] = {'\0'};
-      //  memset(buffer, '\0', sizeof(buffer));
+        memset(buffer, '\0', sizeof(buffer));
 
         int lineCounter = 0;
         while( fgets(buffer, BUFFERSIZE , stdin) ) {
@@ -47,13 +47,13 @@ int main()
         #endif
         /*Construct modules' name and addr*/
         char modulesName[50][15] = {'\0'};
-       // memset(modulesName, '\0', sizeof(modulesName));
+        memset(modulesName, '\0', sizeof(modulesName));
 
         char sortedName[50][15] = {'\0'};
-        //memset(sortedName, '\0', sizeof(sortedName));
+        memset(sortedName, '\0', sizeof(sortedName));
 
         int modulesAddr[50] = {0};
-       // memset(modulesAddr, 0, sizeof(modulesAddr));
+        memset(modulesAddr, 0, sizeof(modulesAddr));
 
         int memLocate = 256;
         int mpt = -1;
@@ -73,24 +73,21 @@ int main()
         }
         /*Construct externals' name and addr for every modules*/
         char externalsName[50][50][15] = {'\0'};
-        //memset(externalsName, '\0', sizeof(externalsName));
+        memset(externalsName, '\0', sizeof(externalsName));
 
         int externalsAddr[50][50] = {0};
-        //memset(externalsAddr, 0, sizeof(externalsAddr));
+        memset(externalsAddr, 0, sizeof(externalsAddr));
 
         int externalsNumber[50] = {0};
-        //memset(externalsNumber, 0, sizeof(externalsNumber));
+        memset(externalsNumber, 0, sizeof(externalsNumber));
 
         int modulesNumber = mpt+1;
-        mpt = -1;
+        mpt = 0;
         int ept = 0;
         for(i = 0; i < lineCounter; i++){
                 /*'D' update module pointer and reset ept*/
                 /*'E' add a external name and addr, ept+1*/
             if (strcmp(instructions[i][0], "D") == 0){
-                if(mpt >= 0) externalsNumber[mpt] = ept;
-                mpt++;
-                ept = 0;
             }
             else if (strcmp(instructions[i][0], "E") == 0){
                 for(j = 0; j < modulesNumber; j++){
@@ -111,6 +108,11 @@ int main()
                 }
                 ept++;
             }
+            else if (strcmp(instructions[i][0], "Z") == 0){
+                if(mpt >= 0) externalsNumber[mpt] = ept;
+                mpt++;
+                ept = 0;
+            }
 
         }
         externalsNumber[mpt] = ept;
@@ -129,12 +131,11 @@ int main()
         #endif
         /*Generate checksum array*/
         int checkSum = 0;
-        mpt = -1;
+        mpt = 0;
         for(i = 0; i < lineCounter; i++){
                 /*'D' update module pointer*/
                 /*'C' go through the values in the instruction.*/
             if (strcmp(instructions[i][0], "D") == 0){
-                mpt++;
             }
             else if (strcmp(instructions[i][0], "C") == 0){
                 int n = (int)strtol(instructions[i][1], NULL, 16);
@@ -157,6 +158,9 @@ int main()
                     /*printf("%s: %04x\n", instructions[i][j], checkSum);*/
                 } /*printf("\n", instructions[i][j]);*/
             }/*End of 'C' instructions*/
+             else if (strcmp(instructions[i][0], "Z") == 0){
+                mpt++;
+            }
         }
 
         #ifndef DEBUG_MESSAGE
@@ -172,7 +176,6 @@ int main()
         printf(" SYMBOL   ADDR\n");
         printf("--------  ----\n");
         for(i = 0; i < modulesNumber; i++){
-                //printf("sN: %s\n", modulesName[i]);
             if(i != 0) if(strcmp(sortedName[i], sortedName[i-1]) == 0) continue;
 
             for(j = 0; j < modulesNumber; j++){
