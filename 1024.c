@@ -4,19 +4,22 @@
 
 #define BUFFERSIZE 1024
 #define DEBUG_MESSAGE
-
+#define INSTRUCTION 1000
+#define DIFINITION 300
+#define EXTERNAL 150
+#define OBJECT 100
 int cmp(void* a, void* b);
 int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i,j,k;
     int caseNumber = 1;
     while(1){
         /*Get input, store in arrays*/
-        char instructions[50][20][15] = {'\0'}; /*1000 lines , every line 20 token and every string 20 words*/
+        char instructions[INSTRUCTION][20][15] = {'\0'}; /*1000 lines , every line 20 token and every string 15 words*/
         memset(instructions, '\0', sizeof(instructions));
 
         char buffer[BUFFERSIZE] = {'\0'};
@@ -33,9 +36,17 @@ int main()
             for(token = strtok(buffer, " "); token != NULL; token = strtok(NULL, " ")) {
                 strcpy(instructions[lineCounter][tokenCounter], token);
                 tokenCounter++;
+                if(tokenCounter > 20) {
+                    printf("Tokens limits\n");
+                    exit(1);
+                }
             }
             lineCounter++;
-            memset(buffer, '\0', sizeof(buffer));
+            memset(buffer, 0, sizeof(buffer));
+        }
+        if(lineCounter > INSTRUCTION) {
+            printf("Lines limit\n");
+            exit(1);
         }
         if(lineCounter == 0) break;
         #ifndef DEBUG_MESSAGE
@@ -46,25 +57,42 @@ int main()
         }*/
         #endif
         /*Construct modules' name and addr*/
-        char modulesName[50][15] = {'\0'};
+        char modulesName[DIFINITION][15] = {'\0'};
         memset(modulesName, '\0', sizeof(modulesName));
 
-        char sortedName[50][15] = {'\0'};
+        char sortedName[DIFINITION][15] = {'\0'};
         memset(sortedName, '\0', sizeof(sortedName));
 
-        int modulesAddr[50] = {0};
+        int modulesAddr[DIFINITION] = {0};
+        memset(modulesAddr, 0, sizeof(modulesAddr));
+
+        int modulesDup[DIFINITION] = {0};
         memset(modulesAddr, 0, sizeof(modulesAddr));
 
         int memLocate = 256;
-        int mpt = -1;
+        int mpt = 0;
         for(i = 0; i < lineCounter; i++){
                 /*'D'add a module name and addr to array.*/
                 /*'C' Update memLocate .*/
             if (strcmp(instructions[i][0], "D") == 0){
-                mpt++;
-                strcpy(modulesName[mpt] ,instructions[i][1]);
-                strcpy(sortedName[mpt] ,instructions[i][1]);
-                modulesAddr[mpt] = (int)strtol(instructions[i][2], NULL, 16) + memLocate;
+                int dup = 0;
+                for(j = 0; j < mpt; j++){
+                    if(strcmp(modulesName[j] ,instructions[i][1]) == 0){
+                        dup = 1;
+                        modulesDup[j] = 1;
+                        break;
+                    }
+                }
+                if(!dup){
+                    strcpy(modulesName[mpt] ,instructions[i][1]);
+                    strcpy(sortedName[mpt] ,instructions[i][1]);
+                    modulesAddr[mpt] = (int)strtol(instructions[i][2], NULL, 16) + memLocate;
+                    mpt++;
+                    if(mpt > DIFINITION) {
+                        printf("Definition limits\n");
+                        exit(1);
+                    }
+                }
             }
             else if (strcmp(instructions[i][0], "C") == 0){
                 memLocate += (int)strtol(instructions[i][1], NULL, 16);
@@ -72,50 +100,61 @@ int main()
 
         }
         /*Construct externals' name and addr for every modules*/
-        char externalsName[50][50][15] = {'\0'};
+        char externalsName[OBJECT][EXTERNAL][15] = {'\0'};
         memset(externalsName, '\0', sizeof(externalsName));
 
-        int externalsAddr[50][50] = {0};
+        int externalsAddr[OBJECT][EXTERNAL] = {0};
         memset(externalsAddr, 0, sizeof(externalsAddr));
 
-        int externalsNumber[50] = {0};
+        int externalsNumber[OBJECT] = {0};
         memset(externalsNumber, 0, sizeof(externalsNumber));
 
-        int modulesNumber = mpt+1;
-        mpt = 0;
+        int modulesNumber = mpt;
+        int opt= 0;
         int ept = 0;
         for(i = 0; i < lineCounter; i++){
                 /*'D' update module pointer and reset ept*/
                 /*'E' add a external name and addr, ept+1*/
-            if (strcmp(instructions[i][0], "D") == 0){
-            }
-            else if (strcmp(instructions[i][0], "E") == 0){
+            if (strcmp(instructions[i][0], "E") == 0){
                 for(j = 0; j < modulesNumber; j++){
                     if(strcmp(modulesName[j], instructions[i][1]) == 0){
-                        strcpy(externalsName[mpt][ept] ,instructions[i][1]);
-                        externalsAddr[mpt][ept] = modulesAddr[j];
+                        strcpy(externalsName[opt][ept] ,instructions[i][1]);
+                        if(modulesAddr[j] == -1) externalsAddr[opt][ept] = 0;
+                        else externalsAddr[opt][ept] = modulesAddr[j];
                         break;
                     }
                 }
                 if (j == modulesNumber){/*Undefined Symbols*/
-                    strcpy(externalsName[mpt][ept] ,instructions[i][1]);
-                    externalsAddr[mpt][ept] = 0;
+                    strcpy(externalsName[opt][ept] ,instructions[i][1]);
+                    externalsAddr[opt][ept] = 0;
                     /*Use -1 as the symbol's addr*/
                     strcpy(modulesName[modulesNumber] ,instructions[i][1]);
                     strcpy(sortedName[modulesNumber] ,instructions[i][1]);
                     modulesAddr[modulesNumber] = -1;
                     modulesNumber++;
+                    if(modulesNumber > DIFINITION) {
+                        printf("Definition limits\n");
+                        exit(1);
+                    }
                 }
                 ept++;
             }
             else if (strcmp(instructions[i][0], "Z") == 0){
-                if(mpt >= 0) externalsNumber[mpt] = ept;
-                mpt++;
+                externalsNumber[opt] = ept;
+                opt++;
                 ept = 0;
+                if(ept > EXTERNAL) {
+                        printf("External limits\n");
+                        exit(1);
+                    }
+                if(opt > EXTERNAL) {
+                        printf("External limits\n");
+                        exit(1);
+                }
             }
 
         }
-        externalsNumber[mpt] = ept;
+        externalsNumber[opt] = ept;
         #ifndef DEBUG_MESSAGE
         for(i = 0; i < modulesNumber; i++){
             printf("%d :%s\n", i, sortedName[i]);
@@ -131,27 +170,28 @@ int main()
         #endif
         /*Generate checksum array*/
         int checkSum = 0;
-        mpt = 0;
+        opt = 0;
         for(i = 0; i < lineCounter; i++){
-                /*'D' update module pointer*/
                 /*'C' go through the values in the instruction.*/
-            if (strcmp(instructions[i][0], "D") == 0){
-            }
-            else if (strcmp(instructions[i][0], "C") == 0){
+            if (strcmp(instructions[i][0], "C") == 0){
                 int n = (int)strtol(instructions[i][1], NULL, 16);
                 /*printf("C: %x\n", n);*/
                 for(j = 2; j < n+2; j++){
                     if (strcmp(instructions[i][j], "$")==0 ){
                         j++;
                         int external = (int)strtol(instructions[i][j], NULL, 16);
-                        checkSum = ((checkSum << 1) | (checkSum >> 15)) & 0xFFFF;
-                        checkSum += (externalsAddr[mpt][external])/256;
+                        if(external > externalsNumber[opt]) {
+                            printf("$ limits\n");
+                            exit(1);
+                        }
+                        checkSum = ((checkSum << 1 & 0x0000ffff) | (checkSum >> 15 & 0xFFFF));
+                        checkSum += (externalsAddr[opt][external])/256;
                         checkSum &= 0x0000ffff;
-                        checkSum = ((checkSum << 1) | (checkSum >> 15)) & 0xFFFF;
-                        checkSum += (externalsAddr[mpt][external] %256);
+                        checkSum = ((checkSum << 1 & 0x0000ffff) | (checkSum >> 15 & 0xFFFF));
+                        checkSum += (externalsAddr[opt][external] %256);
                     }
                     else {
-                        checkSum = ((checkSum << 1) | (checkSum >> 15)) & 0xFFFF;
+                        checkSum = ((checkSum << 1 & 0x0000ffff) | (checkSum >> 15 & 0xFFFF));
                         checkSum += (int)strtol(instructions[i][j], NULL, 16);
                     }
                     checkSum &= 0x0000ffff;
@@ -159,7 +199,7 @@ int main()
                 } /*printf("\n", instructions[i][j]);*/
             }/*End of 'C' instructions*/
              else if (strcmp(instructions[i][0], "Z") == 0){
-                mpt++;
+                opt++;
             }
         }
 
@@ -176,22 +216,21 @@ int main()
         printf(" SYMBOL   ADDR\n");
         printf("--------  ----\n");
         for(i = 0; i < modulesNumber; i++){
-            if(i != 0) if(strcmp(sortedName[i], sortedName[i-1]) == 0) continue;
 
             for(j = 0; j < modulesNumber; j++){
                 if(strcmp(modulesName[j], sortedName[i]) == 0){
-                    if(modulesAddr[j]!=-1)
+                    if(modulesAddr[j]!=-1){
                         printf("%-9s %04X", modulesName[j], modulesAddr[j]);
+                        if(modulesDup[j]){
+                            printf(" M\n");
+                        }
+                        else printf("\n");
+                    }
                     else
-                        printf("%-9s ????", modulesName[j]);
+                        printf("%-9s ????\n", modulesName[j]);
                     break;
                 }
             }
-
-            if(strcmp(sortedName[i], sortedName[i+1]) == 0){
-                printf(" M\n");
-            }
-            else   printf("\n");
         }
         caseNumber++;
     }
