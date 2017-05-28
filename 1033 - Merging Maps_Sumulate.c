@@ -1,6 +1,6 @@
 /*1033 - Merging Maps*/
 #include <stdio.h>
-//#define Show_DM
+#define Show_DM
 
 #define MAX_MAP 50
 #define MAX_ROW 100
@@ -21,7 +21,7 @@ int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
 
     int caseNumber = 1;
@@ -51,13 +51,14 @@ int main()
             mapIn[i].r = r;
             mapIn[i].c = c;
             for(j = 0; j < r; j++) {
+                char line[c+1];
+                scanf("%s", &line);
                 for(k = 0; k < c; k++){
-                    char c;
-                    while((c = getchar()) == '\n');
-                    maps[i][j][k] = c;
+                    maps[i][j][k] = line[k];
                 }
             }
         }
+
         #ifndef Show_DM
         for (i = 0; i < mapNumber; i++) {
             printf("MAP %d:\n", i);
@@ -83,15 +84,17 @@ int main()
         for (i = 0; i < mapNumber; i++) {
             for(j = i+1; j < mapNumber; j++) {
                 CalculateScore(matchNumber, matches, maps, mapIn, i, j);
-                matchNumber++;
+                if(matches[matchNumber].score > 0){
+                    matchNumber++;
+                }
             }
         }
-
         int maxMatch = -1;
         maxMatch = GetHighestMatch(matchNumber, matches);
         #ifndef Show_DM
-        printf("First Round:\n");
+        printf("------Zero Round:------\n");
         for(i = 0; i < matchNumber; i++){
+            if(matches[i].score == 0)continue;
             printf("match %d:\n", i);
             printf("     score: %d\n", matches[i].score);
             printf("     mapA: %d, mapB: %d\n", matches[i].mapA, matches[i].mapB);
@@ -99,6 +102,10 @@ int main()
         }
         for (i = 0; i < mapNumber; i++) {
             printf("MAP %d:\n", i);
+            if(mapIn[i].isValid == 0){
+                printf("    UnValid\n");
+                continue;
+            }
             for(j = 0; j < mapIn[i].r; j++) {
                 printf("    ");
                 for(k = 0; k < mapIn[i].c; k++){
@@ -106,24 +113,87 @@ int main()
                 }
                 printf("\n");
             }
+            printf("    Map information:\n");
+            printf("\tisValid: %d\n", mapIn[i].isValid);
+            printf("\tRow: %d\n", mapIn[i].r);
+            printf("\tCol: %d\n", mapIn[i].c);
             printf("\n");
         }
         #endif
-        if(maxMatch != -1) MergeMaps(maxMatch, matchNumber, matches, maps, mapIn);
+        if(maxMatch != -1) MergeMaps(maxMatch, matchNumber, matches, mapNumber, maps, mapIn);
         mapNumber++;
-
+        #ifndef Show_DM
+        printf("------First Round:------\n");
+        for(i = 0; i < matchNumber; i++){
+            if(matches[i].score == 0)continue;
+            printf("match %d:\n", i);
+            printf("     score: %d\n", matches[i].score);
+            printf("     mapA: %d, mapB: %d\n", matches[i].mapA, matches[i].mapB);
+            printf("     offR: %d, offC: %d\n", matches[i].offsetR, matches[i].offsetC);
+        }
+        for (i = 0; i < mapNumber; i++) {
+            printf("MAP %d:\n", i);
+            if(mapIn[i].isValid == 0){
+                printf("    UnValid\n");
+                continue;
+            }
+            for(j = 0; j < mapIn[i].r; j++) {
+                printf("    ");
+                for(k = 0; k < mapIn[i].c; k++){
+                    printf("%c", maps[i][j][k]);
+                }
+                printf("\n");
+            }
+            printf("    Map information:\n");
+            printf("\tisValid: %d\n", mapIn[i].isValid);
+            printf("\tRow: %d\n", mapIn[i].r);
+            printf("\tCol: %d\n", mapIn[i].c);
+            printf("\n");
+        }
+        #endif
         /*The rest round*/
+        int round = 1;
         while(maxMatch != -1){
             for (i = 0; i < mapNumber-1; i++) {
                 if (mapIn[i].isValid == 0) continue;
                 CalculateScore(matchNumber, matches, maps, mapIn, i, mapNumber-1);
-                matchNumber++;
+                if(matches[matchNumber].score > 0)matchNumber++;
             }
 
             maxMatch = GetHighestMatch(matchNumber, matches);
             if(maxMatch == -1) break;
             MergeMaps(maxMatch, matchNumber, matches, mapNumber, maps, mapIn);
             mapNumber++;
+            #ifndef Show_DM
+            printf("------%d Round:------\n", ++round);
+            for(i = 0; i < matchNumber; i++){
+                if(matches[i].score == 0)continue;
+                printf("match %d:\n", i);
+                printf("     score: %d\n", matches[i].score);
+                printf("     mapA: %d, mapB: %d\n", matches[i].mapA, matches[i].mapB);
+                printf("     offR: %d, offC: %d\n", matches[i].offsetR, matches[i].offsetC);
+            }
+            for (i = 0; i < mapNumber; i++) {
+                printf("MAP %d:\n", i);
+                if(mapIn[i].isValid == 0){
+                    printf("    UnValid\n");
+                    continue;
+                }
+                for(j = 0; j < mapIn[i].r; j++) {
+                    printf("    ");
+                    for(k = 0; k < mapIn[i].c; k++){
+                        printf("%c", maps[i][j][k]);
+                    }
+                    printf("\n");
+                }
+                printf("   Map information:\n");
+                printf("\tisValid: %d\n", mapIn[i].isValid);
+                printf("\tRow: %d\n", mapIn[i].r);
+                printf("\tCol: %d\n", mapIn[i].c);
+                printf("\n");
+            }
+            #endif
+
         }
 
         /*Show the remaining maps.*/
@@ -133,7 +203,7 @@ int main()
         for(i = 0; i < mapNumber; i++) {
             if(mapIn[i].isValid){
                 if(c > 1) printf("\n");
-                printf("    MAP %d:\n");
+                printf("    MAP %d:\n", i+1);
 
                 printf("    +");
                 for(k = 0; k < mapIn[i].c; k++){
@@ -160,10 +230,14 @@ int main()
         }
         caseNumber++;
     }
+    return 0;
 }
 
 void CalculateScore(int matchNumber, match matches[MAX_MATCH], char maps[MAX_MAP][MAX_ROW][MAX_COL], mapInfor mapIn[MAX_MAP], int mapA, int mapB)
 {
+    #ifndef Show_DM
+        printf("Calculate score: %d vs %d\n", mapA, mapB);
+    #endif
     int i, j, k, l;
     /*For r -> 1*/
         /*For c -> 1*/
@@ -194,6 +268,13 @@ void CalculateScore(int matchNumber, match matches[MAX_MATCH], char maps[MAX_MAP
             }
         }
     }
+    #ifndef Show_DM
+        printf("Result:\n");
+        printf("match %d:\n", matchNumber);
+        printf("     score: %d\n", matches[matchNumber].score);
+        printf("     mapA: %d, mapB: %d\n", matches[matchNumber].mapA, matches[matchNumber].mapB);
+        printf("     offR: %d, offC: %d\n", matches[matchNumber].offsetR, matches[matchNumber].offsetC);
+    #endif
 
 
 }
@@ -203,25 +284,54 @@ int GetHighestMatch(int matchNumber, match matches[MAX_MATCH])
     int i;
     /*scan the array, return the max one*/
     int maxMatch = -1;
-    int maxScore = 0;
     for(i = 0; i < matchNumber; i++){
-        if( matches[i].score > maxScore){
-            maxMatch = i;
-            break;
+        if(maxMatch == -1){
+            if( matches[i].score > 0){
+                maxMatch = i;
+            }
         }
+        else {
+            if(CompareTwoMatch(maxMatch, i, matches)){
+                maxMatch = i;
+            }
+        }
+
     }
     /*If no matches can find, return -1*/
+    #ifndef Show_DM
+        printf("Max Match: %d score %d\n", maxMatch, matches[maxMatch].score);
+    #endif
     return maxMatch;
 }
+int CompareTwoMatch(int maxM, int cmpM, match matches[MAX_MATCH])
+{
+    if(matches[maxM].score > matches[cmpM].score ) return 0 ;
+    else if(matches[maxM].score == matches[cmpM].score ){
 
+        if(matches[maxM].mapA < matches[cmpM].mapA ) return 0 ;
+        else if(matches[maxM].mapA == matches[cmpM].mapA ){
+
+            if(matches[maxM].mapB < matches[cmpM].mapB ) return 0 ;
+            else return 1;
+
+        }
+        else return 1;
+
+    }
+    else return 1;
+}
 void MergeMaps(int maxMatch, int matchNumber, match matches[MAX_MATCH], int mapNumber, char maps[MAX_MAP][MAX_ROW][MAX_COL], mapInfor mapIn[MAX_MAP])
 {
+    #ifndef Show_DM
+        printf("Start Merge: %d and %d\n", matches[maxMatch].mapA, matches[maxMatch].mapB);
+    #endif
     int i, j, k;
     /*Compute the new row and col*/
     int offa_r, offa_c, offb_r, offb_c;
     if(matches[maxMatch].offsetR >= 0){
         if(mapIn[matches[maxMatch].mapB].r + matches[maxMatch].offsetR >= mapIn[matches[maxMatch].mapA].r) mapIn[mapNumber].r = mapIn[matches[maxMatch].mapB].r + matches[maxMatch].offsetR;
         else mapIn[mapNumber].r = mapIn[matches[maxMatch].mapA].r;
+
         offa_r = 0;
         offb_r = matches[maxMatch].offsetR;
     }
@@ -233,7 +343,7 @@ void MergeMaps(int maxMatch, int matchNumber, match matches[MAX_MATCH], int mapN
     }
     if(matches[maxMatch].offsetC >= 0){
         if(mapIn[matches[maxMatch].mapB].c + matches[maxMatch].offsetC >= mapIn[matches[maxMatch].mapA].c) mapIn[mapNumber].c = mapIn[matches[maxMatch].mapB].c + matches[maxMatch].offsetC;
-        else mapIn[mapNumber].r = mapIn[matches[maxMatch].mapA].c;
+        else mapIn[mapNumber].c = mapIn[matches[maxMatch].mapA].c;
         offa_c = 0;
         offb_c = matches[maxMatch].offsetC;
     }
@@ -244,6 +354,9 @@ void MergeMaps(int maxMatch, int matchNumber, match matches[MAX_MATCH], int mapN
         offb_c = 0;
     }
     /*Assign data into the new map*/
+    #ifndef Show_DM
+        printf("New map row and col: %d and %d\n", mapIn[mapNumber].r, mapIn[mapNumber].c );
+    #endif
     mapIn[mapNumber].isValid = 1;
     for(i = 0; i < mapIn[matches[maxMatch].mapA].r; i++){
         for(j = 0; j < mapIn[matches[maxMatch].mapA].c; j++){
@@ -252,7 +365,7 @@ void MergeMaps(int maxMatch, int matchNumber, match matches[MAX_MATCH], int mapN
     }
     for(i = 0; i < mapIn[matches[maxMatch].mapB].r; i++){
         for(j = 0; j < mapIn[matches[maxMatch].mapB].c; j++){
-            maps[mapNumber][i + offb_r][j + offb_c] = maps[matches[maxMatch].mapB][i][j];
+            if(maps[matches[maxMatch].mapB][i][j] != '-')maps[mapNumber][i + offb_r][j + offb_c] = maps[matches[maxMatch].mapB][i][j];
         }
     }
     /*UnValid the map being merged and the corresponding matches*/
