@@ -1,4 +1,4 @@
-/*1033 - Merging Maps*/
+/*1033 - Merging Maps_Sumulate*/
 #include <stdio.h>
 #define Show_DM
 
@@ -50,12 +50,12 @@ int main()
             mapIn[i].isValid = 1;
             mapIn[i].r = r;
             mapIn[i].c = c;
+            getchar();
             for(j = 0; j < r; j++) {
-                char line[c+1];
-                scanf("%s", &line);
                 for(k = 0; k < c; k++){
-                    maps[i][j][k] = line[k];
+                    maps[i][j][k] = getchar();
                 }
+                while(getchar() != '\n');
             }
         }
 
