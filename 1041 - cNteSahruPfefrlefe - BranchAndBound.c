@@ -1,11 +1,13 @@
 /*1041 - cNteSahruPfefrlefe - BranchAndBound*/
 #include <stdio.h>
 #include <stdlib.h>
+#define Show_Debug
 int cmp(const void* a, const void *b);
 void BuildCorrect();
-int BranchAndBound(int state[52], int times, int modification, int totalS);
+int BranchAndBound(int state[52], int times, int modification, int totalS, int diff);
 void ShuffleBack(int state[52],int tmp[52]);
 void Swap(int state[52], int s, int p);
+
 int Correct[11][52] = {0};
 int NumberOfShuffles;
 int errorNumber = 100000;
@@ -18,7 +20,7 @@ int main()
 {
      #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		freopen("output2.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i, j, k, l;
     int caseNumber = 1;
@@ -40,13 +42,11 @@ int main()
             scanf("%d", &input[i]);
         }
 
-        /*For ten possible shuffles*/
-        for(i = 1; i <= 10; i++){
-            /*Recursively find the answer*/
-            c = 0;
-            BranchAndBound(input, i, 0, i);
-            //printf("Done\n");
-        }
+        /*Greedy to find the possible shuffle number*/
+        int minDiff = 0;
+        int greedyNumber = FindMinDiff(input, &minDiff);
+        BranchAndBound(input, greedyNumber, 0, greedyNumber, minDiff);
+
         if(errorNumber > 1)
             qsort(errorOrder, errorNumber, sizeof(int), cmp);
         if(caseNumber > 1)printf("\n");
@@ -55,28 +55,44 @@ int main()
         if(errorNumber == 0) printf("No error in any shuffle\n");
         else {
             for(i = 0; i < errorNumber; i++){
-                printf("Error in shuffle %d at location %d\n", errorOccur[i][0], errorOccur[i][1]);
+                printf("Error in shuffle %d at location %d\n", errorOccur[errorOrder[i]][0], errorOccur[errorOrder[i]][1]);
             }
         }
         caseNumber++;
 
     }
+        printf("\n");
     return 0;
 }
 
-
-int BranchAndBound(int state[52], int times, int modification, int totalS)
+int FindMinDiff(int input[52], int* minDiff)
 {
-    c++;
-    //printf("%d\n",c);
-    //printf("New Branch: %d %d %d\n", times, modification, totalS);
-    /*Cut condition: Correct or Impossible*/
-    int i, j, k, l;
-    int diff = 0;
-    for(i = 0; i < 52; i++){
-        if(state[i] != Correct[times][i]) diff++;
+    int i, j, k;
+    int minD = 100;
+    int min = 0;
+    for(i = 0; i < 11; i++){
+        int diff = 0;
+        for(j = 0; j < 52; j++){
+            if(input[j] != Correct[i][j])diff++;
+        }
+        if(diff < minD){
+            minD = diff;
+            min = i;
+        }
     }
-    //printf("%d\n", diff);
+    *minDiff = minD;
+    return min;
+}
+int BranchAndBound(int state[52], int times, int modification, int totalS, int diff)
+{
+
+    #ifndef Show_Debug
+    printf("New Branch: %d %d %d\n", times, modification, totalS);
+    printf("%d\n", diff);
+    #endif
+    int i, j, k, l;
+    /*Cut condition: Correct or Impossible or can't be better*/
+    if(modification > errorNumber) return 0;
     if(diff == 0){
         if (errorNumber > modification) {
             errorNumber = modification;
@@ -90,26 +106,36 @@ int BranchAndBound(int state[52], int times, int modification, int totalS)
         return 1;
     }
     if(diff > times*2) {
-       // printf("Cut\n");
+        #ifndef Show_Debug
+        printf("Cut\n");
+        #endif
         return 0;
     }
     else {
-        //system("pause");
+        int tmp[52];
+        ShuffleBack(state, tmp);
         for(i = 0; i < 52; i++){
-               // printf("\tNew Swap: %d\n", i);
-            int tmp[52];
+            #ifndef Show_Debug
+            printf("\tNew Swap: %d\n", i);
+            #endif
             if(i == 51) {
-                ShuffleBack(state, tmp);
-                if(BranchAndBound(tmp, times-1, modification, totalS) == 1) return 1;
+                BranchAndBound(tmp, times-1, modification, totalS, diff);
             }
             else {
-                for(j = 0; j < 52; j++) tmp[j] = state[j];
-                Swap(state, i, i+1);
-                ShuffleBack(state, tmp);
+                /*Calculate the two index to swap, and the difference*/
+                int s1, s2, c = 0;
+                if(i%2 == 0) s1 = 26+i/2, s2 = (i+1)/2;
+                else s1 = i/2, s2 = 26+(i+1)/2;
+                Swap(tmp, s1, s2);
                 tmpError[modification][0] = times;
                 tmpError[modification][1] = i;
-                if(BranchAndBound(tmp, times-1, modification+1, totalS) == 1)return 1;
-                Swap(state, i, i+1);
+                if(state[i] == Correct[times][i]) c++;
+                else if(state[i+1] == Correct[times][i]) c--;
+                if(state[i+1] == Correct[times][i+1]) c++;
+                else if(state[i] == Correct[times][i+1]) c--;
+                
+                BranchAndBound(tmp, times-1, modification+1, totalS, diff+c);
+                Swap(tmp, s1, s2);
             }
         }
 
@@ -141,7 +167,7 @@ void BuildCorrect()
             if(j%2 == 1) Correct[i][j] = Correct[i-1][j/2];
             else Correct[i][j] = Correct[i-1][j/2+26];
         }
-        //ShuffleBack(Correct[i], Correct[i-1]);
+
     }
     /*
     for(i = 1; i <= 10; i++){
@@ -156,5 +182,5 @@ void BuildCorrect()
 
 int cmp(const void* a, const void *b)
 {
-    return  - errorOccur[*(int*)a][0] + errorOccur[*(int*)b][0];
+    return  errorOccur[*(int*)a][0] - errorOccur[*(int*)b][0];
 }
