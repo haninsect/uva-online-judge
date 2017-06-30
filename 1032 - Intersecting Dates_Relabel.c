@@ -22,12 +22,12 @@ int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		freopen("output.out", "w", stdout);
+		//freopen("output.out", "w", stdout);
 	#endif
     int caseNumber = 1;
     while(1){
         int oldDate, newDate;
-        scanf("%d %d", &oldDate, &newDate);
+        scanf("%d%d", &oldDate, &newDate);
         if(oldDate == 0 && newDate == 0) break;
 
         int i, j;
@@ -35,7 +35,8 @@ int main()
         int pointNumber = 2*(oldDate + newDate);
         point points[pointNumber];
         for (i = 0; i < oldDate + newDate; i++){
-            scanf("%d %d", &intervals[i][0], &intervals[i][1]);
+            scanf("%d%d", &intervals[i][0], &intervals[i][1]);
+            if(intervals[i][0] > intervals[i][1])exit(1);
             points[2*i].date = intervals[i][0];
             points[2*i].interval = i;
             points[2*i].isRightPoint = 0;
@@ -93,15 +94,15 @@ int main()
             printf("Labeled Data: \n");
             for(i = 0; i < labelNumber; i++){
                 printf("%d  ", labeledPoint[i].date);
-            }printf("\n");
+            }printf("\n    ");
             for(i = 0; i < labelNumber; i++){
-                printf("%d   ", i);
-            }printf("\n");
+                printf("%d         ", i);
+            }printf("\n    ");
             for(i = 0; i < labelNumber; i++){
-                printf("%d   ", labeledPoint[i].isValid);
-            }printf("\n  ");
+                printf("%d         ", labeledPoint[i].isValid);
+            }printf("\n         ");
             for(i = 0; i < labelNumber-1; i++){
-                printf("%d   ", labeledInterval[i]);
+                printf("%d         ", labeledInterval[i]);
             }printf("\n");
         #endif
         for(i = 0; i < labelNumber-1; i++){
@@ -115,15 +116,18 @@ int main()
         printf("Case %d:\n", caseNumber);
         int isUpToDate = 1;
         int isPrint = 0;
+        int pDate = 0;
         for(i = 0; i < labelNumber; i++){
             if (i == labelNumber-1){
                 if (isPrint) {
                     if (labeledPoint[i].isValid){
-                        printf("%s\n", StringDate(labeledPoint[i].date));
+                        if(pDate == labeledPoint[i].date) printf("\n");
+                        else printf(" to %s\n", StringDate(labeledPoint[i].date));
                         isUpToDate = 0;
                     }
                     else {
-                        printf("%s\n", StringDate(PrevDate(labeledPoint[i].date) ));
+                        if(pDate == PrevDate(labeledPoint[i].date)) printf("\n");
+                        else printf(" to %s\n", StringDate(PrevDate(labeledPoint[i].date) ));
                         isUpToDate = 0;
                     }
                 }
@@ -142,19 +146,23 @@ int main()
                         continue;
                     }
                     else {
-                        printf("%s", StringDate(PrevDate(labeledPoint[i].date) ));
-                        printf("    %s to ", StringDate(NextDate(labeledPoint[i].date)));
+                        if(pDate == PrevDate(labeledPoint[i].date)) printf("\n");
+                        else printf(" to %s\n", StringDate(PrevDate(labeledPoint[i].date) ));
+                        printf("    %s", StringDate(NextDate(labeledPoint[i].date)));
+                        pDate = NextDate(labeledPoint[i].date);
                         isUpToDate = 0;
                     }
                 }
                 else {
                     if (labeledPoint[i].isValid){
-                        printf("    %s to ", StringDate(labeledPoint[i].date));
+                        printf("    %s", StringDate(labeledPoint[i].date));
+                        pDate = labeledPoint[i].date;
                         isUpToDate = 0;
                         isPrint = 1;
                     }
                     else {
-                        printf("    %s to ", StringDate(NextDate(labeledPoint[i].date)));
+                        printf("    %s", StringDate(NextDate(labeledPoint[i].date)));
+                        pDate = NextDate(labeledPoint[i].date);
                         isUpToDate = 0;
                         isPrint = 1;
                     }
@@ -163,12 +171,14 @@ int main()
             else {
                 if (isPrint) {
                     if (labeledPoint[i].isValid){
-                        printf("%s\n", StringDate(labeledPoint[i].date));
+                        if(pDate == labeledPoint[i].date) printf("\n");
+                        else printf(" to %s\n", StringDate(labeledPoint[i].date));
                         isUpToDate = 0;
                         isPrint = 0;
                     }
                     else {
-                        printf("%s\n", StringDate(PrevDate(labeledPoint[i].date) ));
+                        if(pDate == PrevDate(labeledPoint[i].date)) printf("\n");
+                        else printf(" to %s\n", StringDate(PrevDate(labeledPoint[i].date) ));
                         isUpToDate = 0;
                         isPrint = 0;
                     }
@@ -221,7 +231,7 @@ int NextDate(int x) {
 
 char* StringDate(int date) {
 	int yy = date/10000, mm = date%10000/100, dd = date%100;
-	char *sdate = malloc(sizeof(char)*30);
+	char *sdate = malloc(sizeof(char)*50);
 	sprintf(sdate, "%d/%d/%d", mm, dd, yy);
 	return sdate;
 }
