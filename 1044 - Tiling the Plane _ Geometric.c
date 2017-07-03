@@ -7,12 +7,15 @@
 #define DBUGM1
 #define LargeINT 1000000000
 #define MaxSize 2000
+void ShowSide(int sp, int side[MaxSize]);
+int Check6(int size, int side[MaxSize], int a, int b, int c, int d, int e, int f);
+int Check4(int size, int side[MaxSize], int a, int b, int c, int d);
 int Direction(char d);
 int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		freopen("output.out", "w", stdout);
+		//freopen("output.out", "w", stdout);
 	#endif
     int i, j, k, l, m, n;
     int caseNumber = 1;
@@ -38,15 +41,27 @@ int main()
             }
         }
         if(sp >= MaxSize)exit(1);
-        /*ShowSide(sp, side);*/
+        #ifdef DBUGM
+            ShowSide(sp, side);
+        #endif
         int isPossible = 0;
+        if(sp <= 4) isPossible =1;
+        for(i = 0; i < sp-5 && isPossible == 0; i++){
+            for(j = i+1; j < sp-4 && isPossible == 0; j++){
+                for(k = j+1; k < sp-3 && isPossible == 0; k++){
+                    for(l = k+1; l < sp-2 && isPossible == 0; l++){
+                        isPossible = Check4(sp, side, i, j, k, l);
+                    }
+                }
+            }
+        }
         for(i = 0; i < sp-5 && isPossible == 0; i++){
             for(j = i+1; j < sp-4 && isPossible == 0; j++){
                 for(k = j+1; k < sp-3 && isPossible == 0; k++){
                     for(l = k+1; l < sp-2 && isPossible == 0; l++){
                         for(m = l+1; m < sp-1 && isPossible == 0; m++){
                             for(n = m+1; n < sp && isPossible == 0; n++){
-                                isPossible = Check(sp, side, i, j, k, l, m, n);
+                                isPossible = Check6(sp, side, i, j, k, l, m, n);
                             }
                         }
                     }
@@ -60,7 +75,28 @@ int main()
     }
     return 0;
 }
-int Check(int size, int side[MaxSize], int a, int b, int c, int d, int e, int f)
+int Check4(int size, int side[MaxSize], int a, int b, int c, int d)
+{
+    int i, j;
+    if(b-a != d-c) return 0;
+    for(i = 0; i < b-a; i++){
+        if(side[a+i] != -side[(d-1-i + size)%size]) return 0;
+    }
+    if(c-b != abs(a+size-d)) return 0;
+    for(i = 0; i < c-b; i++){
+        if(side[b+i] != -side[(a-1-i + size)%size]) return 0;
+    }
+
+    #ifdef DBUGM
+        for(i = 0; i < size; i++) {
+            if(i == a || i == b || i ==c || i ==d ) printf("%2d ", i);
+            else printf("   ");
+        }
+        printf("\n");
+    #endif
+    return 1;
+}
+int Check6(int size, int side[MaxSize], int a, int b, int c, int d, int e, int f)
 {
     int i, j;
     if(b-a != e-d) return 0;
@@ -75,13 +111,13 @@ int Check(int size, int side[MaxSize], int a, int b, int c, int d, int e, int f)
     for(i = 0; i < d-c; i++){
         if(side[c+i] != -side[(a-1-i + size)%size]) return 0;
     }
-    /*
-    for(i = 0; i < size; i++) {
-        if(i == a || i == b || i ==c || i ==d || i ==e || i ==f) printf("%2d ", i);
-        else printf("   ");
-    }
-    printf("\n");
-    */
+    #ifdef DBUGM
+        for(i = 0; i < size; i++) {
+            if(i == a || i == b || i ==c || i ==d || i ==e || i ==f) printf("%2d ", i);
+            else printf("   ");
+        }
+        printf("\n");
+    #endif
     return 1;
 }
 int Direction(char d)
