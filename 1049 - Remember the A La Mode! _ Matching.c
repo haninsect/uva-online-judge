@@ -73,13 +73,13 @@ int ConstructGraph(int size, edge graph[size][size], int pie, int ice)
         graph[0][i+1].capacity = pCapacity;
         graph[i+1][0].edgeLen = 0;
         graph[i+1][0].capacity = pCapacity;
-        graph[i+1][0].flow = pCapacity;
+        /*graph[i+1][0].flow = pCapacity;*/
     }
     for(i = 0; i < ice; i++){
         double iCapacity;
         scanf("%lf", &iCapacity);
         graph[size-1][i+pie+1].edgeLen = 0;
-        graph[size-1][i+pie+1].capacity = iCapacity;
+        /*graph[size-1][i+pie+1].capacity = iCapacity;*/
         graph[size-1][i+pie+1].flow = iCapacity;
         graph[i+pie+1][size-1].edgeLen = 0;
         graph[i+pie+1][size-1].capacity = iCapacity;
@@ -156,15 +156,14 @@ int FindPath(int size, edge graph[size][size], int parent[size], int root, int t
     #endif
     while(1){
         int deQ = -1;
-        for(i = 0; i < size; i++){
-            if(visited[i] == 0) {
-                deQ = i;
-                break;
-            }
+        for(i = 0; i < size; i++) if(visited[i] == 0){
+            deQ = i;
+            break;
         }
         if(deQ == -1) break;
+        visited[i] = 1;
         for(i = 0; i < size; i++){
-            if(graph[deQ][i].capacity > graph[deQ][i].flow && graph[deQ][i].edgeLen + key[deQ] < key[i]){
+            if(graph[deQ][i].capacity > graph[deQ][i].flow && graph[deQ][i].edgeLen + key[deQ] < key[i] - errorT){
                 key[i] = graph[deQ][i].edgeLen + key[deQ];
                 parent[i] =deQ;
                 visited[i] = 0;
