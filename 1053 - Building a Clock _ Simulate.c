@@ -5,21 +5,22 @@
 #include <string.h>
 #define DBUGM1
 #define LargeINT 1000000000
-#define errorT 0.0005
+#define errorT 0.00005
 #define AnsSize 100000
-int minutes[AnsSize][12];
+#define AnsLen 15
+int minutes[AnsSize][AnsLen];
 int mNumber = 0;
-int hours[AnsSize][12];
+int hours[AnsSize][AnsLen];
 int hNumber = 0;
 char geers[7] = {'\0'};
 double teeth[7] = {0.0};
 double rate;
-void GetStringFormat(int minutes[12], int hours[12], char alph[12]);
-int CompareAlph(int bMinute[12], int bHour[12], int minutes[12], int hours[12]);
+void GetStringFormat(int minutes[AnsLen], int hours[AnsLen], char alph[AnsLen]);
+int CompareAlph(int bMinute[AnsLen], int bHour[AnsLen], int minutes[AnsLen], int hours[AnsLen]);
 void Swap(int *a, int *b);
 void Permutation(int size, int data[size], int a, int b);
 int powInt(int a, int b);
-void Check(int size, int data[12]);
+void Check(int size, int data[AnsLen]);
 
 int main()
 {
@@ -41,10 +42,9 @@ int main()
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         /*Initialize*/
-        int Impossible = 1;
         for(i = 0; i < 7; i++) geers[i] = '\0', teeth[i] = 0.0;
         for(i = 0; i < AnsSize; i++)
-            for(j = 0; j < 12; j++)
+            for(j = 0; j < AnsLen; j++)
                 minutes[i][j] = -2, hours[i][j] = -2;
         mNumber = 0;
         hNumber = 0;
@@ -58,7 +58,7 @@ int main()
         if(rate == 2) hNumber++;
         /*2~6 shafts*/
         for(i = 1; i < powInt(2, gNumber); i++){
-            int queue[14] = {0};
+            int queue[AnsLen] = {0};
             int qp = 0;
             for(j = 0; j < gNumber; j++){
                 if((i&mask[j]) > 0) {
@@ -71,82 +71,19 @@ int main()
         /*Merge minutes and hours, find the best answer*/
         int minShafts = LargeINT, minGeers = LargeINT;
         int mIndex = -1, hIndex = -1;
-        char alph[12] = {'\0'};
         #ifdef DBUGM
             printf("mNumber: %d, hNumber: %d\n", mNumber, hNumber);
         #endif
-
+        int Impossible = 1;
         for(i = 0; i < mNumber; i++){
             for(j = 0; j < hNumber; j++){
-                int tmpShafts = 1, tmpGeers = 0;
-                int separate = 0;
-                int valid = 1;
-                int used[7] = {0};
-                for(k = 0; (minutes[i][k] != -2 || hours[j][k] != -2) && valid == 1; k++){
-                    if(separate == 0){ /*Still have common part*/
-                        if(minutes[i][k] != hours[j][k]){/*separate here*/
-                            separate = 1;
-                            if(minutes[i][k] >= 0){
-                                if(used[minutes[i][k]]) valid = 0;
-                                else {
-                                    used[minutes[i][k]] = 1;
-                                    tmpGeers++;
-                                }
-                            }
-                            else if (minutes[i][k] == -1){
-                                tmpShafts++;
-                            }
-                            if(hours[j][k] >= 0){
-                                if(used[hours[j][k]]) valid = 0;
-                                else {
-                                    used[hours[j][k]] = 1;
-                                    tmpGeers++;
-                                }
-                            }
-                            else if (hours[j][k] == -1){
-                                tmpShafts++;
-                            }
-                        }
-                        else {/*Same again*/
-                            if(minutes[i][k] >= 0){
-                                if(used[minutes[i][k]]) valid = 0;
-                                else {
-                                    used[minutes[i][k]] = 1;
-                                    tmpGeers++;
-                                }
-                            }
-                            else if (minutes[i][k] == -1){
-                                tmpShafts++;
-                            }
-                        }
-                    }
-                    else { /*Have Separated*/
-                        if(minutes[i][k] >= 0){
-                            if(used[minutes[i][k]]) valid = 0;
-                            else {
-                                used[minutes[i][k]] = 1;
-                                tmpGeers++;
-                            }
-                        }
-                        else if (minutes[i][k] == -1){
-                            tmpShafts++;
-                        }
-                        if(hours[j][k] >= 0){
-                            if(used[hours[j][k]]) valid = 0;
-                            else {
-                                used[hours[j][k]] = 1;
-                                tmpGeers++;
-                            }
-                        }
-                        else if (hours[j][k] == -1){
-                            tmpShafts++;
-                        }
-                    }
-                }
-                if( valid ){/*Compare the answer with the best one*/
+                int tmpShafts, tmpGeers;
+                int valid = 0;
+                valid = Merge(i, j, &tmpGeers, &tmpShafts);
+                /*Compare the answer with the best one*/
+                if( valid ){
                     Impossible = 0;
                     int replace = 0;
-                    char tmpAlph[12] = {'\0'};
                     if(tmpShafts < minShafts) replace = 1;
                     else if(tmpShafts == minShafts){
                         if(tmpGeers < minGeers) replace = 1;
@@ -159,6 +96,7 @@ int main()
                         minGeers = tmpGeers;
                         mIndex = i;
                         hIndex = j;
+                        /*printf("%d %d\n", tmpShafts, tmpGeers);*/
                     }
                 }
 
@@ -186,7 +124,78 @@ int main()
     }
     return 0;
 }
-
+int Merge(int i, int j, int* Geers, int* Shafts)
+{
+    int k;
+    int tmpGeers = 0, tmpShafts = 1;
+    int separate = 0;
+    int valid = 1;
+    int used[7] = {0};
+    for(k = 0; (minutes[i][k] != -2 || hours[j][k] != -2) && valid == 1; k++){
+        if(separate == 0){ /*Still have common part*/
+            if(minutes[i][k] != hours[j][k]){/*separate here*/
+                separate = 1;
+                if(minutes[i][k] >= 0){
+                    if(used[minutes[i][k]]) valid = 0;
+                    else {
+                        used[minutes[i][k]] = 1;
+                        tmpGeers++;
+                    }
+                }
+                else if (minutes[i][k] == -1){
+                    tmpShafts++;
+                }
+                if(hours[j][k] >= 0){
+                    if(used[hours[j][k]]) valid = 0;
+                    else {
+                        used[hours[j][k]] = 1;
+                        tmpGeers++;
+                    }
+                }
+                else if (hours[j][k] == -1){
+                    tmpShafts++;
+                }
+            }
+            else {/*Same again*/
+                if(minutes[i][k] >= 0){
+                    if(used[minutes[i][k]]) valid = 0;
+                    else {
+                        used[minutes[i][k]] = 1;
+                        tmpGeers++;
+                    }
+                }
+                else if (minutes[i][k] == -1){
+                    tmpShafts++;
+                }
+            }
+        }
+        else { /*Have Separated*/
+            if(minutes[i][k] >= 0){
+                if(used[minutes[i][k]]) valid = 0;
+                else {
+                    used[minutes[i][k]] = 1;
+                    tmpGeers++;
+                }
+            }
+            else if (minutes[i][k] == -1){
+                tmpShafts++;
+            }
+            if(hours[j][k] >= 0){
+                if(used[hours[j][k]]) valid = 0;
+                else {
+                    used[hours[j][k]] = 1;
+                    tmpGeers++;
+                }
+            }
+            else if (hours[j][k] == -1){
+                tmpShafts++;
+            }
+        }
+    }
+    *Geers = tmpGeers;
+    *Shafts = tmpShafts;
+    return valid;
+}
 int powInt(int a, int b)
 {
     int i, r = 1;
@@ -194,7 +203,7 @@ int powInt(int a, int b)
     return r;
 }
 
-void Permutation(int size, int data[12], int a, int b)
+void Permutation(int size, int data[AnsLen], int a, int b)
 {
     int i, j;
 	if(a == b)
@@ -224,12 +233,12 @@ void Swap(int *a, int *b)
     *a = *b;
     *b = tmp;
 }
-int CompareAlph(int bMinute[12], int bHour[12], int minutes[12], int hours[12])
+int CompareAlph(int bMinute[AnsLen], int bHour[AnsLen], int minutes[AnsLen], int hours[AnsLen])
 {
     int i, j;
-    char bAlph[12] = {'\0'};
+    char bAlph[AnsLen] = {'\0'};
     GetStringFormat(bMinute, bHour, bAlph);
-    char alph[12] = {'\0'};
+    char alph[AnsLen] = {'\0'};
     GetStringFormat(minutes, hours, alph);
     #ifdef DBUGM
        printf("Compare answer: \n")
@@ -238,7 +247,7 @@ int CompareAlph(int bMinute[12], int bHour[12], int minutes[12], int hours[12])
 
     return strcmp(bAlph, alph);
 }
-void GetStringFormat(int minutes[12], int hours[12], char alph[12])
+void GetStringFormat(int minutes[AnsLen], int hours[AnsLen], char alph[AnsLen])
 {
     int i, j;
     int sp = 0;
@@ -251,7 +260,7 @@ void GetStringFormat(int minutes[12], int hours[12], char alph[12])
         else alph[sp++] = geers[hours[i]];
     }
 }
-void Check(int size, int data[12])
+void Check(int size, int data[AnsLen])
 {
     #ifdef DBUGM
        printf("Start Check: %d\nmNumber: %d, hNumber: %d\n", size, mNumber, hNumber);
@@ -545,7 +554,7 @@ void Check(int size, int data[12])
         }
         break;
     default:
-        printf("Unexpected size: %d\n", size);
+        exit(1);
         break;
     }
     #ifdef DBUGM
