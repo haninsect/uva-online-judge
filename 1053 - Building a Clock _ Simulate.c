@@ -5,42 +5,44 @@
 #include <string.h>
 #define DBUGM1
 #define LargeINT 1000000000
-#define errorT 0.005
+#define errorT 0.0005
 #define AnsSize 100000
 int minutes[AnsSize][12];
 int mNumber = 0;
 int hours[AnsSize][12];
 int hNumber = 0;
 char geers[7] = {'\0'};
-int teeth[7] = {0};
-int rate;
+double teeth[7] = {0.0};
+double rate;
 void GetStringFormat(int minutes[12], int hours[12], char alph[12]);
 int CompareAlph(int bMinute[12], int bHour[12], int minutes[12], int hours[12]);
 void Swap(int *a, int *b);
 void Permutation(int size, int data[size], int a, int b);
 int powInt(int a, int b);
+void Check(int size, int data[12]);
 
 int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
     int mask[7] = {0};
+    for(i = 0; i < 7; i++) mask[i] = powInt(2, i);
     while(1){
 
         int gNumber;
         scanf("%d", &gNumber);
         if(gNumber == 0)break;
-        scanf("%d", &rate);
+        scanf("%lf", &rate);
         #ifdef DBUGM
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         /*Initialize*/
         int Impossible = 1;
-        for(i = 0; i < 7; i++) geers[i] = '\0', teeth[i] = 0;
+        for(i = 0; i < 7; i++) geers[i] = '\0', teeth[i] = 0.0;
         for(i = 0; i < AnsSize; i++)
             for(j = 0; j < 12; j++)
                 minutes[i][j] = -2, hours[i][j] = -2;
@@ -48,9 +50,13 @@ int main()
         hNumber = 0;
 
         for(i = 0; i < gNumber; i++){
-            scanf("%s%d", &geers[i], &teeth[i]);
+            scanf("%s%lf", &geers[i], &teeth[i]);
         }
         /*For all possible combination*/
+        /*1 shaft*/
+        if(rate == 24) mNumber++;
+        if(rate == 2) hNumber++;
+        /*2~6 shafts*/
         for(i = 1; i < powInt(2, gNumber); i++){
             int queue[14] = {0};
             int qp = 0;
@@ -59,18 +65,17 @@ int main()
                     queue[qp++] = j;
                 }
             }
-            for(j = qp; j < qp*2-1; j++){/*Add '-' */
-                queue[j] = -1;
-            }
-            qp = qp*2-1;
             /*For all possible arrangement*/
-            Permutation(qp, queue, 0, qp-1);
+            if(qp > 1) Permutation(qp, queue, 0, qp-1);
         }
         /*Merge minutes and hours, find the best answer*/
         int minShafts = LargeINT, minGeers = LargeINT;
         int mIndex = -1, hIndex = -1;
         char alph[12] = {'\0'};
-        printf("%d %d\n", mNumber, hNumber);
+        #ifdef DBUGM
+            printf("mNumber: %d, hNumber: %d\n", mNumber, hNumber);
+        #endif
+
         for(i = 0; i < mNumber; i++){
             for(j = 0; j < hNumber; j++){
                 int tmpShafts = 1, tmpGeers = 0;
@@ -146,7 +151,7 @@ int main()
                     else if(tmpShafts == minShafts){
                         if(tmpGeers < minGeers) replace = 1;
                         else if(tmpGeers == minGeers){
-                            if(CompareAlph(minutes[mIndex], hours[hIndex], minutes[i], hours[j])) replace = 1;
+                            if(CompareAlph(minutes[mIndex], hours[hIndex], minutes[i], hours[j]) == 1) replace = 1;
                         }
                     }
                     if(replace){
@@ -160,20 +165,22 @@ int main()
             }
         }
 
-
+        if(caseNumber > 1) printf("\n");
         printf("Trial %d", caseNumber);
         if(Impossible == 0){
             printf("\nMinutes: *");
             for(i = 0; minutes[mIndex][i] != -2; i++){
-                printf("%c", minutes[mIndex][i]);
+                if(minutes[mIndex][i] == -1) printf("-");
+                else printf("%c", geers[minutes[mIndex][i]]);
             }
-            printf("\nHours: *");
+            printf("\nHours:   *");
             for(i = 0;  hours[hIndex][i] != -2; i++){
-                printf("%c", hours[hIndex][i]);
+                if(hours[hIndex][i] == -1) printf("-");
+                else printf("%c", geers[hours[hIndex][i]]);
             }
             printf("\n");
         }
-        printf(" IS IMPOSSIBLE\n");
+        else printf(" IS IMPOSSIBLE\n");
         caseNumber++;
 
     }
@@ -187,7 +194,7 @@ int powInt(int a, int b)
     return r;
 }
 
-void Permutation(int size, int data[size], int a, int b)
+void Permutation(int size, int data[12], int a, int b)
 {
     int i, j;
 	if(a == b)
@@ -195,73 +202,13 @@ void Permutation(int size, int data[size], int a, int b)
 	    #ifdef DBUGM
            printf("Find Permutation:%d\n", size);
             for(i = 0; i < size; i++) {
-                if(data[i] == -1) printf("-");
-                else printf("%c", geers[data[i]]);
+                printf("%c", geers[data[i]]);
             }printf("\n");
         #endif
-
-	    /*Minute*/
-	    int dc = 0, nc = 0, start = 0;
-	    int tmpRate = -rate, tmpTeeth = 0;
-	    if(rate == 24) mNumber++;
-	    else {
-            while(data[start] == -1) start++;
-            tmpTeeth = tmpRate*teeth[data[start]];
-            for(i = start; i < size; i++) {
-
-                if(data[i] == -1) dc++, nc = 0;
-                else nc++, dc = 0;
-                if(dc >= 2) break;
-                if(nc >= 3) break;
-                if(nc == 1) tmpRate = -tmpTeeth/teeth[data[start]];
-                if(nc != 0) tmpTeeth = tmpRate*teeth[data[start]];
-                if(tmpRate == 24){
-                    for(j = start; j <= i; j++){
-                        minutes[mNumber][j-start] = data[j];
-                    }
-                    mNumber++;
-                    break;
-                }
-            }
-	    }
-		/*Hour*/
-		dc = 0;
-		nc = 0;
-		start = 0;
-	    tmpRate = -rate;
-	    if(rate == 2) hNumber++;
-	    else {
-            while(data[start] == -1) start++;
-            tmpTeeth = tmpRate*teeth[data[start]];
-            for(i = start; i < size; i++) {
-                if(data[i] == -1) dc++, nc = 0;
-                else nc++, dc = 0;
-                if(dc >= 2) break;
-                if(nc >= 3) break;
-                if(nc == 1) tmpRate = -tmpTeeth/teeth[data[start]];
-                if(nc != 0) tmpTeeth = tmpRate*teeth[data[start]];
-                if(tmpRate == 2){
-                    for(j = start; j <= i; j++){
-                        hours[hNumber][j-start] = data[j];
-                    }
-                    hNumber++;
-                    break;
-                }
-            }
-	    }
+	    Check(size, data);
 	}
 	else
 	{
-	    int dc = 0, nc = 0, start = 0;
-        while(data[start] == -1) start++;
-        for(i = start; i < a; i++) {
-            if(data[i] == -1) dc++, nc = 0;
-            else nc++, dc = 0;
-            if(dc >= 2) return;
-            if(nc >= 3) return;
-        }
-
-
 		for(i = a; i < size; i++)
 		{
 		  Swap(&data[a], &data[i]);
@@ -284,18 +231,325 @@ int CompareAlph(int bMinute[12], int bHour[12], int minutes[12], int hours[12])
     GetStringFormat(bMinute, bHour, bAlph);
     char alph[12] = {'\0'};
     GetStringFormat(minutes, hours, alph);
-    return strcmp(alph, bAlph);
+    #ifdef DBUGM
+       printf("Compare answer: \n")
+       printf("%s  v.s.  %s  Replace?: %d\n", bAlph, alph, strcmp(bAlph, alph));
+    #endif
+
+    return strcmp(bAlph, alph);
 }
 void GetStringFormat(int minutes[12], int hours[12], char alph[12])
 {
     int i, j;
     int sp = 0;
     for(i = 0; minutes[i] != -2; i++){
-        if(minutes[i] == -1) alph[sp++] = '-';
+        if(minutes[i] == -1) continue;
         else alph[sp++] = geers[minutes[i]];
     }
     for(i = 0; hours[i] != -2; i++){
-        if(hours[i] == -1) alph[sp++] = '-';
+        if(hours[i] == -1) continue;
         else alph[sp++] = geers[hours[i]];
     }
+}
+void Check(int size, int data[12])
+{
+    #ifdef DBUGM
+       printf("Start Check: %d\nmNumber: %d, hNumber: %d\n", size, mNumber, hNumber);
+    #endif
+    int i, j;
+    switch(size){
+    case 2:
+        /*A-B*/
+        if (fabs(-rate*teeth[data[0]]/teeth[data[1]] - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]/teeth[data[1]] - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hNumber++;
+        }
+        break;
+    case 3:
+        /*A-B-C*/
+        if (fabs(rate*teeth[data[0]]/teeth[data[2]] - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]/teeth[data[2]] - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hNumber++;
+        }
+        break;
+    case 4:
+        /*A-B-C-D*/
+        if (fabs(-rate*teeth[data[0]]/teeth[data[3]] - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = -1;
+            minutes[mNumber][6] = data[3];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]/teeth[data[3]] - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = -1;
+            hours[hNumber][6] = data[3];
+            hNumber++;
+        }
+        /*A-BC-D*/
+        if (fabs(rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[3]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = data[2];
+            minutes[mNumber][4] = -1;
+            minutes[mNumber][5] = data[3];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[3]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = data[2];
+            hours[hNumber][4] = -1;
+            hours[hNumber][5] = data[3];
+            hNumber++;
+        }
+        break;
+    case 5:
+        /*A-B-C-D-E*/
+        if (fabs(rate*teeth[data[0]]/teeth[data[4]] - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = -1;
+            minutes[mNumber][6] = data[3];
+            minutes[mNumber][7] = -1;
+            minutes[mNumber][8] = data[4];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]/teeth[data[4]] - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = -1;
+            hours[hNumber][6] = data[3];
+            hours[hNumber][7] = -1;
+            hours[hNumber][8] = data[4];
+            hNumber++;
+        }
+        /*A-BC-D-E*/
+        if (fabs(-rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[4]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = data[2];
+            minutes[mNumber][4] = -1;
+            minutes[mNumber][5] = data[3];
+            minutes[mNumber][6] = -1;
+            minutes[mNumber][7] = data[4];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[4]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = data[2];
+            hours[hNumber][4] = -1;
+            hours[hNumber][5] = data[3];
+            hours[hNumber][6] = -1;
+            hours[hNumber][7] = data[4];
+            hNumber++;
+        }
+        /*A-B-CD-E*/
+        if (fabs(-rate*teeth[data[0]]*teeth[data[3]]/(teeth[data[2]]*teeth[data[4]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = data[3];
+            minutes[mNumber][6] = -1;
+            minutes[mNumber][7] = data[4];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]*teeth[data[3]]/(teeth[data[2]]*teeth[data[4]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = data[3];
+            hours[hNumber][6] = -1;
+            hours[hNumber][7] = data[4];
+            hNumber++;
+        }
+        break;
+    case 6:
+        /*A-B-C-D-E-F*/
+        if (fabs(-rate*teeth[data[0]]/teeth[data[5]] - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = -1;
+            minutes[mNumber][6] = data[3];
+            minutes[mNumber][7] = -1;
+            minutes[mNumber][8] = data[4];
+            minutes[mNumber][9] = -1;
+            minutes[mNumber][10] = data[5];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]/teeth[data[5]] - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = -1;
+            hours[hNumber][6] = data[3];
+            hours[hNumber][7] = -1;
+            hours[hNumber][8] = data[4];
+            hours[hNumber][9] = -1;
+            hours[hNumber][10] = data[5];
+            hNumber++;
+        }
+        /*A-BC-D-E-F*/
+        if (fabs(rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[5]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = data[2];
+            minutes[mNumber][4] = -1;
+            minutes[mNumber][5] = data[3];
+            minutes[mNumber][6] = -1;
+            minutes[mNumber][7] = data[4];
+            minutes[mNumber][8] = -1;
+            minutes[mNumber][9] = data[5];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]*teeth[data[2]]/(teeth[data[1]]*teeth[data[5]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = data[2];
+            hours[hNumber][4] = -1;
+            hours[hNumber][5] = data[3];
+            hours[hNumber][6] = -1;
+            hours[hNumber][7] = data[4];
+            hours[hNumber][8] = -1;
+            hours[hNumber][9] = data[5];
+            hNumber++;
+        }
+        /*A-B-CD-E-F*/
+        if (fabs(rate*teeth[data[0]]*teeth[data[3]]/(teeth[data[2]]*teeth[data[5]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = data[3];
+            minutes[mNumber][6] = -1;
+            minutes[mNumber][7] = data[4];
+            minutes[mNumber][8] = -1;
+            minutes[mNumber][9] = data[5];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]*teeth[data[3]]/(teeth[data[2]]*teeth[data[5]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = data[3];
+            hours[hNumber][6] = -1;
+            hours[hNumber][7] = data[4];
+            hours[hNumber][8] = -1;
+            hours[hNumber][9] = data[5];
+            hNumber++;
+        }
+        /*A-B-C-DE-F*/
+        if (fabs(rate*teeth[data[0]]*teeth[data[4]]/(teeth[data[3]]*teeth[data[5]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = -1;
+            minutes[mNumber][4] = data[2];
+            minutes[mNumber][5] = -1;
+            minutes[mNumber][6] = data[3];
+            minutes[mNumber][7] = data[4];
+            minutes[mNumber][8] = -1;
+            minutes[mNumber][9] = data[5];
+            mNumber++;
+        }
+        else if (fabs(rate*teeth[data[0]]*teeth[data[4]]/(teeth[data[3]]*teeth[data[5]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = -1;
+            hours[hNumber][4] = data[2];
+            hours[hNumber][5] = -1;
+            hours[hNumber][6] = data[3];
+            hours[hNumber][7] = data[4];
+            hours[hNumber][8] = -1;
+            hours[hNumber][9] = data[5];
+            hNumber++;
+        }
+        /*A-BC-DE-F*/
+        if (fabs(-rate*teeth[data[0]]*teeth[data[2]]*teeth[data[4]]/(teeth[data[1]]*teeth[data[3]]*teeth[data[5]]) - 24) < errorT){
+            minutes[mNumber][0] = data[0];
+            minutes[mNumber][1] = -1;
+            minutes[mNumber][2] = data[1];
+            minutes[mNumber][3] = data[2];
+            minutes[mNumber][4] = -1;
+            minutes[mNumber][5] = data[3];
+            minutes[mNumber][6] = data[4];
+            minutes[mNumber][7] = -1;
+            minutes[mNumber][8] = data[5];
+            mNumber++;
+        }
+        else if (fabs(-rate*teeth[data[0]]*teeth[data[2]]*teeth[data[4]]/(teeth[data[1]]*teeth[data[3]]*teeth[data[5]]) - 2) < errorT){
+            hours[hNumber][0] = data[0];
+            hours[hNumber][1] = -1;
+            hours[hNumber][2] = data[1];
+            hours[hNumber][3] = data[2];
+            hours[hNumber][4] = -1;
+            hours[hNumber][5] = data[3];
+            hours[hNumber][6] = data[4];
+            hours[hNumber][7] = -1;
+            hours[hNumber][8] = data[5];
+            hNumber++;
+        }
+        break;
+    default:
+        printf("Unexpected size: %d\n", size);
+        break;
+    }
+    #ifdef DBUGM
+        printf("Check done\n");
+    #endif
+    return;
 }
