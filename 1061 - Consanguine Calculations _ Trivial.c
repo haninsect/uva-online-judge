@@ -7,7 +7,7 @@
 #define LargeINT 1000000000
 #define MaxSize 350
 #define errorT 0.00005
-const char blood[4][2] = {"A", "B", "AB", "O"};
+const char blood[4][3] = {"A", "B", "AB", "O"};
 const char Rh[4][2] = {"-", "+"};
 int BloodTable[4][4][4]; /*[father][mother][child]*/
 int RhTable[4][4][4]; /*[father][mother][child]*/
@@ -31,31 +31,44 @@ int main()
             scanf("%s", &father);
             break;
         }
-        printf("%s %s %s\n", father, mother, child);
         scanf("%s", &mother);
         scanf("%s", &child);
-        printf("%s %s %s\n", father, mother, child);
-        system("pause");
         #ifdef DBUGM
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         int pBlood[5];
-        for(i = 0; i < 10; i++) pBlood[i] = -1;
+        for(i = 0; i < 5; i++) pBlood[i] = -1;
         FindBlood(father, mother, child, pBlood);
         int pRh[5];
-        for(i = 0; i < 3; i++) pRh[i] = -1;
+        for(i = 0; i < 5; i++) pRh[i] = -1;
         FindRh(father, mother, child, pRh);
-
+        #ifdef DBUGM
+        for(i = 0; i < 5; i++) printf("%d ", pBlood[i]);
+        printf("\n");
+        for(i = 0; i < 5; i++) printf("%d ", pRh[i]);
+        printf("\n");
+        #endif
+        int count = 0;
+        char singleAns[5] = {'\0'};
+        for(i = 0; pBlood[i] != -1; i++){
+            for(j = 0; pRh[j] != -1; j++){
+                   count++;
+                   sprintf(singleAns, "%s%s", blood[pBlood[i]], Rh[pRh[j]]);
+            }
+        }
         /*Show result*/
         printf("Case %d:", caseNumber);
-        /*if(father[0] == '?'){
-            if(pBlood[0] == -1 || pRh[0] == -1) printf(" IMPOSSIBLE");
+        if(father[0] == '?'){
+            if(count == 0) printf(" IMPOSSIBLE");
+            else if(count == 1) printf(" %s", singleAns);
             else {
-                printf(" {%s%s", blood[pBlood[0]], Rh[pRh[0]]);
-                for(i = 0; pBlood[i] != -1; i++){
+                int time = 0;
+                for(i = 3; i >= 0; i--){
+                    if(pBlood[i] == -1) continue;
                     for(j = 0; pRh[j] != -1; j++){
-                        if(i == 0 && j == 0) continue;
-                        printf(", %s %s", blood[pBlood[i]], Rh[pRh[j]]);
+                        if(time == 0) printf(" {%s%s",  blood[pBlood[i]], Rh[pRh[j]]);
+                        else printf(", %s%s", blood[pBlood[i]], Rh[pRh[j]]);
+                        time++;
                     }
                 }
                 printf("}");
@@ -65,13 +78,16 @@ int main()
         }
         else if(mother[0] == '?'){
             printf(" %s", father);
-            if(pBlood[0] == -1 || pRh[0] == -1) printf(" IMPOSSIBLE");
+            if(count == 0) printf(" IMPOSSIBLE");
+            else if(count == 1) printf(" %s", singleAns);
             else {
-                printf(" {%s%s", blood[pBlood[0]], Rh[pRh[0]]);
-                for(i = 0; pBlood[i] != -1; i++){
+                int time = 0;
+                for(i = 3; i >= 0; i--){
+                    if(pBlood[i] == -1) continue;
                     for(j = 0; pRh[j] != -1; j++){
-                        if(i == 0 && j == 0) continue;
-                        printf(", %s %s", blood[pBlood[i]], Rh[pRh[j]]);
+                        if(time == 0) printf(" {%s%s",  blood[pBlood[i]], Rh[pRh[j]]);
+                        else printf(", %s%s", blood[pBlood[i]], Rh[pRh[j]]);
+                        time++;
                     }
                 }
                 printf("}");
@@ -81,18 +97,21 @@ int main()
         else if(child[0] == '?'){
             printf(" %s", father);
             printf(" %s", mother);
-            if(pBlood[0] == -1 || pRh[0] == -1) printf(" IMPOSSIBLE");
+            if(count == 0) printf(" IMPOSSIBLE");
+            else if(count == 1) printf(" %s", singleAns);
             else {
-                printf(" {%s%s", blood[pBlood[0]], Rh[pRh[0]]);
-                for(i = 0; pBlood[i] != -1; i++){
+                int time = 0;
+                for(i = 3; i >= 0; i--){
+                    if(pBlood[i] == -1) continue;
                     for(j = 0; pRh[j] != -1; j++){
-                        if(i == 0 && j == 0) continue;
-                        printf(", %s %s", blood[pBlood[i]], Rh[pRh[j]]);
+                        if(time == 0) printf(" {%s%s",  blood[pBlood[i]], Rh[pRh[j]]);
+                        else printf(", %s%s", blood[pBlood[i]], Rh[pRh[j]]);
+                        time++;
                     }
                 }
                 printf("}");
             }
-        }*/
+        }
         printf("\n");
         caseNumber++;
     }
@@ -107,12 +126,12 @@ void FindRh(char father[5], char mother[5], char child[5], int pRh[5])
         else fb = 0;
     }
     if(mother[0] != '?'){
-        if(mother[strlen(mother)-1] == '+') fb = 1;
-        else fb = 0;
+        if(mother[strlen(mother)-1] == '+') mb = 1;
+        else mb = 0;
     }
     if(child[0] != '?'){
-        if(child[strlen(child)-1] == '+') fb = 1;
-        else fb = 0;
+        if(child[strlen(child)-1] == '+') cb = 1;
+        else cb = 0;
     }
     if(fb == -1){
         int i;
@@ -205,8 +224,8 @@ void ConstructBlood()
         for(j = 0; j < 4; j++){
             if(i == 0 || j == 0 || i == 2 || j == 2) BloodTable[i][j][0] = 1;
             if(i == 1 || j == 1 || i == 2 || j == 2) BloodTable[i][j][1] = 1;
-            if((i == 0 || j == 1) || (i == 1 || j == 0) || (i == 2 || j != 3) || (i != 3 || j == 2)) BloodTable[i][j][2] = 1;
-            if((i == 3 || j != 2) || (i != 2 || j == 3)) BloodTable[i][j][3] = 1;
+            if((i == 0 && j == 1) || (i == 1 && j == 0) || (i == 2 && j != 3) || (i != 3 && j == 2)) BloodTable[i][j][2] = 1;
+            if(i != 2 && j != 2) BloodTable[i][j][3] = 1;
         }
     }
 }
