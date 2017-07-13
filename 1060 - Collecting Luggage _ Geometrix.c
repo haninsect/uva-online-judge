@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define DBUGM
+#define DBUGM1
 #define LargeINT 1000000000
 #define MaxSize 101
 #define errorT 0.00005
@@ -17,12 +17,12 @@ typedef struct {
 /*Global*/
 void ToString(double time, char string[10]);
 int Dijkstra(int from, int to);
-double CheckValid(segment checkline, int a, int b);
+double CheckValid(segment checkline);
 void AddPoint(point p, int index, int at);
 void ConstructGraph();
 double CalculateArea(int size, segment lines[size]);
-double CalculatePolygon();
 int CheckIntersect(segment edgeA, segment edgeB);
+void ReadInput();
 
 double oArea;
 int eNumber;
@@ -50,9 +50,11 @@ int main()
         ReadInput();
         /*Construct Graph*/
         gSize = eNumber+2;
-        oArea = CalculatePolygon();
+        oArea = CalculateArea(eNumber, lines);
         ConstructGraph();
+        ShowGraph();
         AddPoint(people, 0, -eNumber);
+        ShowGraph();
 
         /*Binary search possible t. For all t, there is a target on polygon. Edit graph with the target. Run Dijkstra to calculate time.*/
         double hb = 10000000, lb = 0;
@@ -70,11 +72,15 @@ int main()
             target.y = (lines[i].y2 - lines[i].y1)*( factor ) + lines[i].y1;
             AddPoint(target, gSize-1, -i);
             double ans = Dijkstra(0, gSize-1);
+            printf("!%lf %lf\n", mid, ans);
+            printf("!%lf %lf\n", target.x, target.y);
+            break;
             ans = ans/speedp;
             if(ans > mid) lb = mid;
             else if(fabs(ans - mid) < errorT) hb = mid;
             else hb = mid;
         }
+        ShowGraph();
         //printf("%lf %lf\n", hb, lb);
         char TimeString[10] = {'\0'};
         ToString(hb, TimeString);
@@ -99,7 +105,7 @@ void ConstructGraph()
             tmp.y1 = lines[i].y1;
             tmp.x2 = lines[j].x1;
             tmp.y2 = lines[j].y1;
-            double valid = CheckValid(tmp, i, j);
+            double valid = CheckValid(tmp);
             adjMatrix[i+1][j+1] = valid;
             adjMatrix[j+1][i+1] = valid;
         }
@@ -114,7 +120,7 @@ void AddPoint(point p, int index, int at)
     /*Flush*/
     int i;
     for(i = 0; i < eNumber; i++){
-        adjMatrix[i][index] = 0;
+        adjMatrix[i+1][index] = 0;
         adjMatrix[index][i+1] = 0;
     }
     /*Add edge*/
@@ -124,16 +130,18 @@ void AddPoint(point p, int index, int at)
         tmp.y1 = lines[i].y1;
         tmp.x2 = p.x;
         tmp.y2 = p.y;
-        double valid = CheckValid(tmp, i, at);
+        double valid = CheckValid(tmp);
+            printf("%04.2lf %04.2lf -> %04.2lf %04.2lf\n", tmp.x1, tmp.y1, tmp.x2, tmp.y2);
+            printf("%d %d: %lf\n\n", index, at, valid);
         adjMatrix[i+1][index] = valid;
         adjMatrix[index][i+1] = valid;
     }
 }
 
-double CheckValid(segment checkline, int from, int to)
+double CheckValid(segment checkline)
 {
     #ifdef DBUGM
-        printf("---CheckValid %d %d---\n", from, to);
+        printf("---CheckValid---\n");
     #endif
     /*Should return length*/
     /*All Overlap -> valid*/
@@ -147,90 +155,91 @@ double CheckValid(segment checkline, int from, int to)
     #ifdef DBUGM
        printf("isIntersection: %d\n", isIntersection);
     #endif
-
     if(isIntersection == 1) return 0; /*Crossing edge*/
     else if(isIntersection == -1) return len; /*All overlap*/
     else {
-        if(to = -eNumber) return len; /*Source*/
-        else {
-            /*The area increase -> fail*/
-            double aArea, bArea;
-            if(to > 0){
-                segment apart[abs(from-to) +1];
-                for(i = 0; i < abs(from-to); i++){
-                    apart[i].x1 = lines[i + from].x1;
-                    apart[i].x2 = lines[i + from].x2;
-                    apart[i].y1 = lines[i + from].y1;
-                    apart[i].y2 = lines[i + from].y2;
-                }
-                apart[i].x1 = checkline.x2;
-                apart[i].x2 = checkline.y2;
-                apart[i].y1 = checkline.x1;
-                apart[i].y2 = checkline.y1;
-                aArea = CalculateArea(abs(from-to) +1, apart);
-
-                segment bpart[eNumber - abs(from-to) +1];
-                for(i = 0; i < eNumber - abs(from-to); i++){
-                    bpart[i].x1 = lines[(i + b)%eNumber].x1;
-                    bpart[i].x2 = lines[(i + b)%eNumber].x2;
-                    bpart[i].y1 = lines[(i + b)%eNumber].y1;
-                    bpart[i].y2 = lines[(i + b)%eNumber].y2;
-                }
-                bpart[i].x1 = checkline.x1;
-                bpart[i].x2 = checkline.y1;
-                bpart[i].y1 = checkline.x2;
-                bpart[i].y2 = checkline.y2;
-                bArea = CalculateArea(eNumber - abs(from-to) +1, bpart);
-
-            }
-            else { /*Target which is on the side*/
-                b = -b;
-                segment apart[abs(from-to) +1 +1];
-                for(i = 0; i < abs(from-to); i++){
-                    apart[i].x1 = lines[i + a].x1;
-                    apart[i].x2 = lines[i + a].x2;
-                    apart[i].y1 = lines[i + a].y1;
-                    apart[i].y2 = lines[i + a].y2;
-                }
-                apart[i].x1 = lines[b].x1;
-                apart[i].y1 = lines[b].x2;
-                apart[i].x2 = checkline.x2;
-                apart[i].y2 = checkline.y2;
-                apart[i+1].x1 = checkline.x2;
-                apart[i+1].y1 = checkline.y2;
-                apart[i+1].x2 = checkline.x1;
-                apart[i+1].y2 = checkline.y1;
-                aArea = CalculateArea(a - b +1, apart);
-
-                segment bpart[eNumber - (a - b) +1];
-                for(i = 0; i < eNumber - (a - b); i++){
-                    bpart[i].x1 = lines[(i + b)%eNumber].x1;
-                    bpart[i].x2 = lines[(i + b)%eNumber].x2;
-                    bpart[i].y1 = lines[(i + b)%eNumber].y1;
-                    bpart[i].y2 = lines[(i + b)%eNumber].y2;
-                    if(i == 0){
-                        bpart[i].x1 = checkline.x2;
-                        bpart[i].y1 = checkline.y2;
-                    }
-                }
-                bpart[i].x1 = checkline.x1;
-                bpart[i].y1 = checkline.y1;
-                bpart[i].x2 = checkline.x2;
-                bpart[i].y2 = checkline.y2;
-                bArea = CalculateArea(eNumber - (a - b) +1, bpart);
-            }
-            if(fabs(aArea + bArea - oArea) < errorT) return 0;
-            else return len;
-        }
-
+        /*The area increase -> fail*/
+        if(CheckAllInside(checkline) == 1) return 0;
+        else return len;
     }
+}
+int CheckAllInside(segment checkline)
+{
+    int i = 0, j;
+    point tmp1;
+    tmp1.x = checkline.x1;
+    tmp1.y = checkline.y1;
+    point tmp2;
+    tmp2.x = checkline.x2;
+    tmp2.y = checkline.y2;
 
+    while(CheckOnSide(lines[i], tmp1) == 0) i++;
+    segment part[MaxSize];
+    int partNumber = 0;
+    part[partNumber].x1 = tmp1.x;
+    part[partNumber].y1 = tmp1.y;
+    part[partNumber].x2 = lines[i].x2;
+    part[partNumber++].y2 = lines[i].y2;
+    i = (i+1)%eNumber;
+    while(CheckOnSide(lines[i], tmp2) == 0){
+        part[partNumber].x1 = part[partNumber-1].x2;
+        part[partNumber].y1 = part[partNumber-1].y2;
+        part[partNumber].x2 = lines[i].x2;
+        part[partNumber++].y2 = lines[i].y2;
+        i = (i+1)%eNumber;
+    }
+    part[partNumber].x1 = part[partNumber-1].x2;
+    part[partNumber].y1 = part[partNumber-1].y2;
+    part[partNumber].x2 = tmp2.x;
+    part[partNumber++].y2 = tmp2.y;
+    part[partNumber].x1 = part[partNumber-1].x2;
+    part[partNumber].y1 = part[partNumber-1].y2;
+    part[partNumber].x2 = tmp1.x;
+    part[partNumber++].y2 = tmp1.y;
+    double partA = CalculateArea(partNumber, part);
 
+    /*Part B*/
+    while(CheckOnSide(lines[i], tmp1) == 0) i = (i+1)%eNumber;
+    segment partb[MaxSize];
+    partNumber = 0;
+    partb[partNumber].x1 = tmp2.x;
+    partb[partNumber].y1 = tmp2.y;
+    partb[partNumber].x2 = lines[i].x2;
+    partb[partNumber++].y2 = lines[i].y2;
+    i = (i+1)%eNumber;
+    while(CheckOnSide(lines[i], tmp1) == 0){
+        partb[partNumber].x1 = partb[partNumber-1].x2;
+        partb[partNumber].y1 = partb[partNumber-1].y2;
+        partb[partNumber].x2 = lines[i].x2;
+        partb[partNumber++].y2 = lines[i].y2;
+        i = (i+1)%eNumber;
+    }
+    partb[partNumber].x1 = partb[partNumber-1].x2;
+    partb[partNumber].y1 = partb[partNumber-1].y2;
+    partb[partNumber].x2 = tmp1.x;
+    partb[partNumber++].y2 = tmp1.y;
+    partb[partNumber].x1 = part[partNumber-1].x2;
+    partb[partNumber].y1 = part[partNumber-1].y2;
+    partb[partNumber].x2 = tmp2.x;
+    partb[partNumber++].y2 = tmp2.y;
+    double partB = CalculateArea(partNumber, part);
+    if(partA + partA > oArea) return 0;
+
+}
+int CheckOnSide(segment line, point pt)
+{
+    double l1 = sqrt((line.x1-pt.x)*(line.x1-pt.x) + (line.y1-pt.y)*(line.y1-pt.y));
+    double l2 = sqrt((line.x2-pt.x)*(line.x2-pt.x) + (line.y2-pt.y)*(line.y2-pt.y));
+    double l3 = sqrt((line.x2-line.x1)*(line.x2-line.x1) + (line.y2-line.y1)*(line.y2-line.y1));
+    if(fabs(l1 + l2 - l3) < errorT) return 1;
 }
 int CheckIntersect(segment edgeA, segment edgeB)
 {
     if( fabs((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1)) < errorT ){
-        if( (fabs(edgeA.y2 - edgeB.y2) < errorT) && (fabs(edgeA.x2 - edgeB.x2) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y1) < errorT) && (fabs(edgeA.x1 - edgeB.x1) < errorT)) ){
+        if( ((fabs(edgeA.y2 - edgeB.y2) < errorT) && (fabs(edgeA.x2 - edgeB.x2) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y1) < errorT) && (fabs(edgeA.x1 - edgeB.x1) < errorT)) ){
+            return -1;
+        }
+        if( ((fabs(edgeA.y2 - edgeB.y1) < errorT) && (fabs(edgeA.x2 - edgeB.x1) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y2) < errorT) && (fabs(edgeA.x1 - edgeB.x2) < errorT)) ){
             return -1;
         }
     }
@@ -238,19 +247,12 @@ int CheckIntersect(segment edgeA, segment edgeB)
     /*ua = ((x4 - x3)(y1 - y3) - (y4-y3)(x1-x3)) / ((y4 - y3)(x2 - x1) - (x4 - x3)(y2 - y1))*/
     double c = (double)((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / (double)((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
     double r = (double)((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / (double)((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
-    if(c >= 1 || c <= 0 || r >= 1 || r <= 0) return 0;
+    //printf("%lf %lf\n", c, r);
+    if(c > 1-errorT || c < 0+errorT || r > 1-errorT || r < 0+errorT) return 0;
     else return 1;
 }
-double CalculatePolygon()
-{
-    double area = 0;
-    int i;
-    for(i = 0; i < eNumber+1; i++){
-        area += lines[i].x1*lines[i].y2 - lines[i].x2*lines[i].y1;
-    }
-    return abs(area)/2;
-}
-double CalculateArea(int size, segment polygon[size])
+
+double CalculateArea(int size, segment polygon[MaxSize])
 {
     double area = 0;
     int i;
@@ -322,6 +324,18 @@ void ReadInput()
     lines[i-1].x2 = lines[0].x1;
     lines[i-1].y2 = lines[0].y1;
     len[0] = sqrt((lines[i-1].y2 - lines[i-1].y1)*(lines[i-1].y2 - lines[i-1].y1) + (lines[i-1].x2 - lines[i-1].x1)*(lines[i-1].x2 - lines[i-1].x1)) + len[i-1];
-    scanf("%d%d", &people.x, &people.y);
+    scanf("%lf%lf", &people.x, &people.y);
     scanf("%lf%lf", &speedb, &speedp);
+}
+
+void ShowGraph()
+{
+    int i, j;
+    for(i = 0; i < gSize; i++){
+        for(j = 0; j < gSize; j++){
+            printf("%05.2lf ", adjMatrix[i][j]);
+        }
+        printf("\n");
+    }
+        printf("\n");
 }
