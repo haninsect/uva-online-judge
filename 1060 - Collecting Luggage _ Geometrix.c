@@ -16,12 +16,12 @@ typedef struct {
 } point;
 /*Global*/
 void ToString(double time, char string[10]);
-int Dijkstra(int from, int to);
+double Dijkstra(int from, int to);
 double CheckValid(segment checkline);
 void AddPoint(point p, int index, int at);
 void ConstructGraph();
 double CalculateArea(int size, segment lines[size]);
-int CheckIntersect(segment edgeA, segment edgeB);
+int CheckIntersect(segment edgeA, segment edgeB, segment edge0);
 void ReadInput();
 
 double oArea;
@@ -71,16 +71,17 @@ int main()
             target.x = (lines[i].x2 - lines[i].x1)*( factor ) + lines[i].x1;
             target.y = (lines[i].y2 - lines[i].y1)*( factor ) + lines[i].y1;
             AddPoint(target, gSize-1, -i);
+            ShowGraph();
             double ans = Dijkstra(0, gSize-1);
-            printf("!%lf %lf\n", mid, ans);
-            printf("!%lf %lf\n", target.x, target.y);
-            break;
+            printf("1: %lf %lf\n", mid, ans);
+            printf("2: %lf %lf\n", target.x, target.y);
+            /*break;*/
             ans = ans/speedp;
+            printf("ANS: %lf\n", ans);
             if(ans > mid) lb = mid;
             else if(fabs(ans - mid) < errorT) hb = mid;
             else hb = mid;
         }
-        ShowGraph();
         //printf("%lf %lf\n", hb, lb);
         char TimeString[10] = {'\0'};
         ToString(hb, TimeString);
@@ -132,7 +133,7 @@ void AddPoint(point p, int index, int at)
         tmp.y2 = p.y;
         double valid = CheckValid(tmp);
             printf("%04.2lf %04.2lf -> %04.2lf %04.2lf\n", tmp.x1, tmp.y1, tmp.x2, tmp.y2);
-            printf("%d %d: %lf\n\n", index, at, valid);
+            printf("%d %d: %lf\n\n", index, i, valid);
         adjMatrix[i+1][index] = valid;
         adjMatrix[index][i+1] = valid;
     }
@@ -150,7 +151,7 @@ double CheckValid(segment checkline)
     int isIntersection = 0;
     double len = sqrt((checkline.y2 - checkline.y1)*(checkline.y2 - checkline.y1) + (checkline.x2 - checkline.x1)*(checkline.x2 - checkline.x1));
     for(i = 0; i < eNumber && isIntersection == 0; i++){
-        isIntersection = CheckIntersect(lines[i], checkline);
+        isIntersection = CheckIntersect(lines[i], checkline, lines[(i-1+eNumber)%eNumber]);
     }
     #ifdef DBUGM
        printf("isIntersection: %d\n", isIntersection);
@@ -223,7 +224,9 @@ int CheckAllInside(segment checkline)
     partb[partNumber].x2 = tmp2.x;
     partb[partNumber++].y2 = tmp2.y;
     double partB = CalculateArea(partNumber, part);
-    if(partA + partA > oArea) return 0;
+    printf("%lf + %lf > %lf : %d", partA, partB, partA + partB, partA + partB > oArea-errorT);
+    if(partA + partB > oArea+errorT) return 0;
+    else return 1;
 
 }
 int CheckOnSide(segment line, point pt)
@@ -233,7 +236,7 @@ int CheckOnSide(segment line, point pt)
     double l3 = sqrt((line.x2-line.x1)*(line.x2-line.x1) + (line.y2-line.y1)*(line.y2-line.y1));
     if(fabs(l1 + l2 - l3) < errorT) return 1;
 }
-int CheckIntersect(segment edgeA, segment edgeB)
+int CheckIntersect(segment edgeA, segment edgeB, segment edge0)
 {
     if( fabs((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1)) < errorT ){
         if( ((fabs(edgeA.y2 - edgeB.y2) < errorT) && (fabs(edgeA.x2 - edgeB.x2) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y1) < errorT) && (fabs(edgeA.x1 - edgeB.x1) < errorT)) ){
@@ -247,7 +250,19 @@ int CheckIntersect(segment edgeA, segment edgeB)
     /*ua = ((x4 - x3)(y1 - y3) - (y4-y3)(x1-x3)) / ((y4 - y3)(x2 - x1) - (x4 - x3)(y2 - y1))*/
     double c = (double)((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / (double)((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
     double r = (double)((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / (double)((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
-    //printf("%lf %lf\n", c, r);
+    //printf("r, c: %lf %lf\n", r, c);
+    if(fabs(r - 0) < errorT && (c < 1-errorT && c > 0+errorT)){
+        /*Check if crossing on corner*/
+        double a2 = -(edgeB.y2 - edgeB.y1), b2 = edgeB.x2 - edgeB.x1, c2 = (edgeB.y2 - edgeB.y1)*edgeB.x1 - (edgeB.x2 - edgeB.x1)*edgeB.y1;
+        double sign1, sign2;
+         // printf("Line B: %dx + %dy + %d = 0\n", a2, b2, c2);
+         sign1  = a2*edgeA.x2 + b2*edgeA.y2 + c2;
+         sign2  = a2*edge0.x1 + b2*edge0.y1 + c2;
+         //printf("S: %lf %lf\n", sign1, sign2);
+         if(sign1 * sign2 >= 0-errorT) return 0;
+         else return 1;
+
+    }
     if(c > 1-errorT || c < 0+errorT || r > 1-errorT || r < 0+errorT) return 0;
     else return 1;
 }
@@ -262,7 +277,7 @@ double CalculateArea(int size, segment polygon[MaxSize])
     return abs(area)/2;
 }
 
-int Dijkstra(int from, int to)
+double Dijkstra(int from, int to)
 {
     int i, j;
     int valid[gSize], parent[gSize];
@@ -281,13 +296,17 @@ int Dijkstra(int from, int to)
         if(deQ == -1) break;
         valid[deQ] = 0;
         for(i = 0; i < gSize; i++){
-            if(adjMatrix[deQ][i] > errorT && valid[i] == 1){
+            if(adjMatrix[deQ][i] > 0+errorT && valid[i] == 1){
                 if(key[deQ] + adjMatrix[deQ][i] < key[i]) {
+                        printf("%lf + %lf = %lf\n", key[deQ], adjMatrix[deQ][i], key[deQ] + adjMatrix[deQ][i]);
                     key[i] = key[deQ] + adjMatrix[deQ][i];
                     parent[i] = deQ;
                 }
             }
         }
+
+        for(i = 0;  i < gSize; i++) printf("%lf ", key[i]);
+        printf("\n");
     }
     /*Return length*/
     //printf("dij: %lf\n", key[to]);
@@ -326,6 +345,8 @@ void ReadInput()
     len[0] = sqrt((lines[i-1].y2 - lines[i-1].y1)*(lines[i-1].y2 - lines[i-1].y1) + (lines[i-1].x2 - lines[i-1].x1)*(lines[i-1].x2 - lines[i-1].x1)) + len[i-1];
     scanf("%lf%lf", &people.x, &people.y);
     scanf("%lf%lf", &speedb, &speedp);
+    speedb /= 60;
+    speedp /= 60;
 }
 
 void ShowGraph()
