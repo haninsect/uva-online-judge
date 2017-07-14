@@ -116,7 +116,7 @@ void ConstructGraph()
             double valid = CheckValid(tmp);
             #ifdef DBUGM
                 printf("Add point: %04.2lf %04.2lf -> %04.2lf %04.2lf\n", tmp.x1, tmp.y1, tmp.x2, tmp.y2);
-                printf("Result:%d %d: %05.2lf\n\n", i, j, valid);
+                printf("Result:%d/%d %d/%d: %05.2lf\n\n", i, eNumber, j, eNumber, valid);
             #endif
             adjMatrix[i+1][j+1] = valid;
             adjMatrix[j+1][i+1] = valid;
@@ -181,10 +181,11 @@ double CheckValid(segment checkline)
     double len = sqrt((checkline.y2 - checkline.y1)*(checkline.y2 - checkline.y1) + (checkline.x2 - checkline.x1)*(checkline.x2 - checkline.x1));
     for(i = 0; i < eNumber && isIntersection == 0; i++){
         isIntersection = CheckIntersect(lines[i], checkline, lines[(i-1+eNumber)%eNumber]);
+        #ifdef DBUGM
+           printf("isIntersection with %d: %d\n", i, isIntersection);
+        #endif
     }
-    #ifdef DBUGM
-       printf("isIntersection: %d\n", isIntersection);
-    #endif
+
     if(isIntersection == 1) return 0; /*Crossing edge*/
     else if(isIntersection == -1) return len; /*All overlap*/
     else {
@@ -284,6 +285,7 @@ int CheckIntersect(segment edgeA, segment edgeB, segment edge0)
         if( ((fabs(edgeA.y2 - edgeB.y1) < errorT) && (fabs(edgeA.x2 - edgeB.x1) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y2) < errorT) && (fabs(edgeA.x1 - edgeB.x2) < errorT)) ){
             return -1;
         }
+        return 0;
     }
     /*Compute the proportion from edgeA->P1 to the intersection*/
     /*ua = ((x4 - x3)(y1 - y3) - (y4-y3)(x1-x3)) / ((y4 - y3)(x2 - x1) - (x4 - x3)(y2 - y1))*/
@@ -364,13 +366,8 @@ double Dijkstra(int from, int to)
 }
 void ToString(double time, char string[10])
 {
-    int m = 0;
-    while(time - 60 > -errorT){
-        time -= 60;
-        m++;
-    }
-    if(time - 60 > -0.5-errorT) time = 0, m++;
-    sprintf(string, "%d:%02.0lf", m, time);
+    int answer = (int) (time + 0.5 + errorT);
+    sprintf(string, "%d:%02d", answer/60, answer%60);
 }
 
 void ReadInput()
@@ -413,7 +410,7 @@ void ShowGraph()
     int i, j;
     for(i = 0; i < gSize; i++){
         for(j = 0; j < gSize; j++){
-            printf("%05.2lf ", adjMatrix[i][j]);
+            printf("%15.2lf ", adjMatrix[i][j]);
         }
         printf("\n");
     }
