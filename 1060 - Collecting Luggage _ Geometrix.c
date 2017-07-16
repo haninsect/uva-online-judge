@@ -22,6 +22,7 @@ void AddPoint(point p, int index, int at);
 void ConstructGraph();
 double CalculateArea(int size, segment lines[size]);
 int CheckIntersect(segment edgeA, segment edgeB, segment edge0);
+double EdgeLen(segment edge);
 void ReadInput();
 
 double oArea;
@@ -279,11 +280,15 @@ int CheckOnSide(segment line, point pt)
 int CheckIntersect(segment edgeA, segment edgeB, segment edge0)
 {
     if( fabs((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1)) < errorT ){
-        if( ((fabs(edgeA.y2 - edgeB.y2) < errorT) && (fabs(edgeA.x2 - edgeB.x2) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y1) < errorT) && (fabs(edgeA.x1 - edgeB.x1) < errorT)) ){
-            return -1;
+        if( ( (fabs(edgeA.y1 - edgeB.y1) < errorT) && (fabs(edgeA.x1 - edgeB.x1) < errorT)) ){
+            if((edgeA.y2 - edgeA.y1)*(edgeB.y2 - edgeB.y1) > 0-errorT && (edgeA.x2 - edgeA.x1)*(edgeB.x2 - edgeB.x1) > 0-errorT){
+                if(EdgeLen(edgeA) - EdgeLen(edgeB) > 0-errorT) return -1;
+            }
         }
-        if( ((fabs(edgeA.y2 - edgeB.y1) < errorT) && (fabs(edgeA.x2 - edgeB.x1) < errorT)) || ( (fabs(edgeA.y1 - edgeB.y2) < errorT) && (fabs(edgeA.x1 - edgeB.x2) < errorT)) ){
-            return -1;
+        if( ( (fabs(edgeA.y2 - edgeB.y1) < errorT) && (fabs(edgeA.x2 - edgeB.x1) < errorT)) ){
+            if((edgeA.y2 - edgeA.y1)*(edgeB.y2 - edgeB.y1) < 0+errorT && (edgeA.x2 - edgeA.x1)*(edgeB.x2 - edgeB.x1) < 0+errorT){
+                if(EdgeLen(edgeA) - EdgeLen(edgeB) > 0-errorT) return -1;
+            }
         }
         return 0;
     }
@@ -360,6 +365,8 @@ double Dijkstra(int from, int to)
     }
     /*Return length*/
     #ifdef DBUGM
+        for(i = 0;  i < gSize; i++) printf("%d ", parent[i]);
+        printf("\n");
         printf("dij: %lf\n", key[to]);
     #endif
     return key[to];
@@ -423,4 +430,9 @@ void showPolygon(int size, segment edge[size])
     for(i = 0; i < size; i++){
         printf("%d: %04.2lf %04.2lf -> %04.2lf %04.2lf\n", i, edge[i].x1, edge[i].y1, edge[i].x2, edge[i].y2);
     }
+}
+
+double EdgeLen(segment edge)
+{
+    return sqrt((edge.y2 - edge.y1)*(edge.y2 - edge.y1) + (edge.x2 - edge.x1)*(edge.x2 - edge.x1));
 }
