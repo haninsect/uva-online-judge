@@ -175,6 +175,13 @@ void ShowTriangle()
         ShowLine(tArray[i].lines[2]);
     }
 }
+double CalculateOriginalArea(Segment s1, Segment s2, double height, int triN)
+{
+    if( fabs(tArray[triN].theta-90) < errorT) return 0;
+    double f = sqrt( (s1.x1 - s2.x1)*(s1.x1 - s2.x1) + (s1.y1 - s2.y1)*(s1.y1 - s2.y1) + (s1.z1 - s2.z1)*(s1.z1 - s2.z1));
+    double c = sqrt( (s1.x2 - s2.x2)*(s1.x2 - s2.x2) + (s1.y2 - s2.y2)*(s1.y2 - s2.y2) + (s1.z2 - s2.z2)*(s1.z2 - s2.z2));
+    return fabs( (f + c * height)/cos(tArray[triN].theta)/2);
+}
 int main()
 {
     #ifndef ONLINE_JUDGE
@@ -234,9 +241,6 @@ int main()
         }
         if(sliceNumber >= MaxSlice) while(1);
         /*For each slice , sort vertexes on it*/
-        /*Between two slices, merge vertexes to get area.*/
-            /*When a new vertex(triangle) coming , compare it to the top triangle. only calculate the top one's area*/
-            /*When a vertex leave, if it is the top one, extract max to find another top one*/
         for(i = 0; i < sliceNumber; i++){
             svNumber[i] = 0;
             Segment tmpl;
@@ -268,7 +272,53 @@ int main()
             }
         }
         #endif
+        /*Between two slices, merge vertexes to get area.*/
+            /*When a new vertex(triangle) coming , compare it to the top triangle. only calculate the top one's area*/
+            /*When a vertex leave, if it is the top one, extract max to find another top one*/
         double area = 0;
+        for(i = 0; i < sliceNumber-1; i++){
+            printf("------ Slice %d -> %d ------\n", i, i+1);
+            int lp = -1, rp = -1;
+            int valid[triangleNumber];
+            for(j = 0; j < triangleNumber; j++) valid[j] = 0;
+            int top =-1;
+            Segment tmps1, tmps2;;
+            while(1){
+                /*Get new vertex*/
+                while(++lp < svNumber[i]){
+                    if(slices[i].v[lp].kind != 2) break;
+                }
+                while(++rp < svNumber[i+1]){
+                    if(slices[i+1].v[rp].kind != 0) break;
+                }
+                printf("left right: %d/%d %d/%d, TL TR: %d %d\n", lp, svNumber[i], rp, svNumber[i+1], slices[i].v[lp].triangle, slices[i+1].v[rp].triangle);
+                if(lp == svNumber[i] || rp == svNumber[i+1]) break;
+                if(slices[i].v[lp].triangle != slices[i+1].v[rp].triangle) while(1)printf("lp != rp!!!\n"),exit(1);
+                if(valid[j] == 1){
+                    valid[j] == 0;
+                    continue;
+                }
+                if(top == -1) {
+                    top = rp;
+                    valid[rp] = 1;
+                    FindLine(slices[i].v[lp], slices[i+1].v[rp], &tmps1);
+                }
+                else if(top == rp){
+                    FindLine(slices[i].v[lp], slices[i+1].v[rp], &tmps2);
+                    area += CalculateOriginalArea(tmps1, tmps2, slices[i+1].x - slices[i].x, top);
+                    /*Extract max*/
+                    for(j = 0; j < triangleNumber; j++) if(valid[j] == 1){
+                        top = j;
+                        break;
+                    }
+                }
+                else {
+                    valid[rp] = 1;
+                    /*Compare to the top*/
+                    top = rp;
+                }
+            }
+        }
         printf("Case %d: %.2lf\n", caseNumber, area);
         caseNumber++;
     }
