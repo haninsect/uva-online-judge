@@ -14,11 +14,12 @@ int vertexNumber = 0, triangleNumber = 0;
 typedef struct {
     double x, y, z;
 } Vec;
-typedef struct {
+typedef struct Vertex {
     double x, y, z;
     int triangle;
-    int kind; /*0 left point, 1 intersection, 2 right point*/
-} Vertex;
+    int hasNext;
+    double nx, ny, nz;
+}Vertex;
 typedef struct {
     double x1, x2;
     double y1, y2;
@@ -29,10 +30,11 @@ typedef struct {
     Segment lines[3];
     /*ax + by + cz + d = 0*/
     double a, b, c, d;
-    double theta;
+    double cos;
 } Triangle;
 typedef struct {
     double x;
+    Segment line;
     Vertex v[MaxVertex];
 } Slice;
 Vertex vArray[300];
@@ -58,26 +60,35 @@ void Cross(Vec a, Vec b, Vec *c)
         c->z *= -1;
     }
 }
-void GetVec(Vertex a, Vertex b, Vec v)
+void GetVec(Vertex a, Vertex b, Vec *v)
 {
-    v.x = b.x - a.x;
-    v.y = b.x - a.y;
-    v.z = b.x - a.z;
+    v->x = b.x - a.x;
+    v->y = b.y - a.y;
+    v->z = b.z - a.z;
 }
 void FindPlane(Triangle* t)
 {
     Vec a, b, c;
-    GetVec(vArray[t->vIndex[0]], vArray[t->vIndex[1]], a);
-    GetVec(vArray[t->vIndex[0]], vArray[t->vIndex[2]], b);
+    GetVec(vArray[t->vIndex[0]], vArray[t->vIndex[1]], &a);
+    GetVec(vArray[t->vIndex[0]], vArray[t->vIndex[2]], &b);
     Cross(a, b, &c);
     double d = -(c.x*vArray[t->vIndex[0]].x + c.y*vArray[t->vIndex[0]].y + c.z*vArray[t->vIndex[0]].z);
     t->a = c.x;
     t->b = c.y;
     t->c = c.z;
     t->d = d;
-    if(fabs(t->c - 0) < errorT ) t->theta = M_PI*90/360;
-    t->theta = acos(fabs(t->c)/VecLen(c));
+    if(fabs(t->c - 0) < errorT ) t->cos = -1;
+    t->cos = fabs((t->c)/VecLen(c));
 
+}
+void FindLine2(Vertex a, Segment* line)
+{
+    line->x1 = a.x;
+    line->y1 = a.y;
+    line->z1 = a.z;
+    line->x2 = a.nx;
+    line->y2 = a.ny;
+    line->z2 = a.nz;
 }
 void FindLine(Vertex a, Vertex b, Segment* line)
 {
@@ -109,21 +120,33 @@ void Read(int caseNumber)
     for(i = 0; i < vertexNumber; i++){
         scanf("%lf%lf%lf", &vArray[i].x, &vArray[i].y, &vArray[i].z);
     }
+    int tmpCount = 0;
     for(i = 0; i < triangleNumber; i++){
         int a, b, c;
         scanf("%d%d%d", &a, &b, &c);
-        tArray[i].vIndex[0] = a-1;
-        tArray[i].vIndex[1] = b-1;
-        tArray[i].vIndex[2] = c-1;
-        FindLine(vArray[tArray[i].vIndex[0]], vArray[tArray[i].vIndex[1]], &tArray[i].lines[0]);
-        FindLine(vArray[tArray[i].vIndex[1]], vArray[tArray[i].vIndex[2]], &tArray[i].lines[1]);
-        FindLine(vArray[tArray[i].vIndex[2]], vArray[tArray[i].vIndex[0]], &tArray[i].lines[2]);
-        FindPlane(&tArray[i]);
+        tArray[tmpCount].vIndex[0] = a-1;
+        tArray[tmpCount].vIndex[1] = b-1;
+        tArray[tmpCount].vIndex[2] = c-1;
+        FindLine(vArray[tArray[tmpCount].vIndex[0]], vArray[tArray[tmpCount].vIndex[1]], &tArray[tmpCount].lines[0]);
+        FindLine(vArray[tArray[tmpCount].vIndex[1]], vArray[tArray[tmpCount].vIndex[2]], &tArray[tmpCount].lines[1]);
+        FindLine(vArray[tArray[tmpCount].vIndex[2]], vArray[tArray[tmpCount].vIndex[0]], &tArray[tmpCount].lines[2]);
+        FindPlane(&tArray[tmpCount]);
+        if( fabs(tArray[tmpCount].c - 0) < errorT ) continue;
+        tmpCount++;
     }
+    triangleNumber = tmpCount;
 }
 void ShowLine(Segment edgeA)
 {
     printf("Line: (%2.2lf, %2.2lf %2.2lf) -> (%2.2lf, %2.2lf %2.2lf)\n", edgeA.x1, edgeA.y1, edgeA.z1, edgeA.x2, edgeA.y2, edgeA.z2);
+}
+void ShowVertex(Vertex v)
+{
+    if( v.hasNext != 0)
+        printf("   (%2.2lf %2.2lf %2.2lf) Triangle: %d next: -> (%2.2lf %2.2lf %2.2lf)  \n", v.x, v.y, v.z, v.triangle, v.nx, v.ny, v.nz);
+    else
+        printf("   (%2.2lf %2.2lf %2.2lf) Triangle: %d next: -> NULL  \n", v.x, v.y, v.z, v.triangle);
+
 }
 int FindIntersection(Segment edgeA, Segment edgeB, Vertex *v)
 {
@@ -142,7 +165,7 @@ int FindIntersection(Segment edgeA, Segment edgeB, Vertex *v)
     double ppB = ((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / ((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
     double ppA = ((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / ((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
     #ifdef DBUGM
-        printf("ppA, c: %2.2lf %2.2lf\n", ppA, ppB);
+        printf("ppA, ppB: %2.2lf %2.2lf\n", ppA, ppB);
     #endif
     if(ppB > 1+errorT || ppB < 0-errorT || ppA > 1+errorT || ppA < 0-errorT) return 0;
     else {
@@ -150,25 +173,38 @@ int FindIntersection(Segment edgeA, Segment edgeB, Vertex *v)
         v->y = (edgeA.y2 - edgeA.y1)*ppA + edgeA.y1;
         v->z = (edgeA.z2 - edgeA.z1)*ppA + edgeA.z1;
         #ifdef DBUGM
-            printf("Intersection: (%2.2lf, %2.2lf %2.2lf)\n", v->x, v->y, v->z);
+        printf("Intersection: (%2.2lf, %2.2lf %2.2lf)\n", v->x, v->y, v->z);
         #endif
         return 1;
     }
 }
 int cmp(const void *a, const void *b)
 {
-    return *(double*)a - *(double*)b;
+    if( fabs(*(double*)a - *(double*)b) < errorT) return 0;
+    else if(*(double*)a - *(double*)b > 0) return 1;
+    else return -1;
 }
 int cmpVertex(const void *a, const void *b)
 {
     Vertex *ap = (Vertex*)a, *bp = (Vertex*)b;
-    return bp->y - ap->y;
+    if(fabs(bp->y - ap->y) < errorT && bp->hasNext == 1 && ap->hasNext == 1){
+        if(fabs(bp->ny - ap->ny) < errorT) return 0;
+        else if(bp->ny - ap->ny > 0) return 1;
+        else return -1;
+    }
+    else if(bp->y - ap->y > 0) return 1;
+    else return -1;
 }
 
 void ShowTriangle()
 {
     int i, j;
+
+
     for(i = 0; i < triangleNumber; i++){
+        printf("T: %d\n", i);
+        printf("%2.2lfx + %2.2lfy + %2.2lfz + %2.2lf = 0\n",tArray[i].a, tArray[i].b, tArray[i].c, tArray[i].d);
+        printf("cos: %2.2lf\n", tArray[i].cos);
         for(j = 0; j < 3; j++) printf("%d: (%2.2lf %2.2lf %2.2lf)\n", tArray[i].vIndex[j], vArray[tArray[i].vIndex[j]].x, vArray[tArray[i].vIndex[j]].y, vArray[tArray[i].vIndex[j]].z);
         ShowLine(tArray[i].lines[0]);
         ShowLine(tArray[i].lines[1]);
@@ -177,16 +213,59 @@ void ShowTriangle()
 }
 double CalculateOriginalArea(Segment s1, Segment s2, double height, int triN)
 {
-    if( fabs(tArray[triN].theta-90) < errorT) return 0;
+    #ifdef DBUGM
+        printf("      ---- Valid Area:\n");
+        printf("      height: %2.2lf, Triangle: %d\n      ", height, triN);
+        ShowLine(s1);
+        printf("      ");
+        ShowLine(s2);
+    #endif
+    if( fabs(tArray[triN].cos+1) < errorT) return 0;
     double f = sqrt( (s1.x1 - s2.x1)*(s1.x1 - s2.x1) + (s1.y1 - s2.y1)*(s1.y1 - s2.y1) + (s1.z1 - s2.z1)*(s1.z1 - s2.z1));
     double c = sqrt( (s1.x2 - s2.x2)*(s1.x2 - s2.x2) + (s1.y2 - s2.y2)*(s1.y2 - s2.y2) + (s1.z2 - s2.z2)*(s1.z2 - s2.z2));
-    return fabs( (f + c * height)/cos(tArray[triN].theta)/2);
+    #ifdef DBUGM
+        printf("      Area: (%2.2lf + %2.2lf)*%2.2lf /2/%2.2lf: %2.2lf\n", f, c, height, tArray[triN].cos, fabs( (f + c) * height/tArray[triN].cos/2));
+    #endif
+    return fabs( (f + c) * height/tArray[triN].cos/2);
+}
+int GetAbove(int t1, int t2, Vertex v)
+{
+    double z1 = (-tArray[t1].a*v.x - tArray[t1].b*v.y - tArray[t1].d)/tArray[t1].c;
+    double z2 = (-tArray[t2].a*v.x - tArray[t2].b*v.y - tArray[t2].d)/tArray[t2].c;
+    if(z1 - z2 > 0-errorT) return t1;
+    else return t2;
+}
+int GetTop(Segment s1, Vertex v, int valid[triangleNumber])
+{
+    int i;
+    int tmp = -1;
+    Vertex tmpV ;
+    tmpV.x = ((v.x + v.nx)/2 + (s1.x1 + s1.x2)/2)/2;
+    tmpV.y = ((v.y + v.ny)/2 + (s1.y1 + s1.y2)/2)/2;
+    tmpV.z = ((v.z + v.nz)/2 + (s1.z1 + s1.z2)/2)/2;
+    for(i = 0; i < triangleNumber; i++){
+        #ifdef DBUGM
+            printf("%d ", valid[i]);
+        #endif
+        if(valid[i] == 0) continue;
+        if(tmp == -1) {
+            tmp = i;
+            continue;
+        }
+        else {
+            tmp = GetAbove(tmp, i, tmpV);
+        }
+    }
+    #ifdef DBUGM
+        printf("\n");
+    #endif
+    return tmp;
 }
 int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
@@ -215,19 +294,19 @@ int main()
                 if(i == j) continue;
                 for(k = 0; k < 3; k++){
                     Vertex tmp;
-                    if(FindIntersection(tArray[i].lines[0], tArray[j].lines[k], &tmp))sliceX[sliceNumber++] = tmp.x;
-                    if(FindIntersection(tArray[i].lines[1], tArray[j].lines[k], &tmp))sliceX[sliceNumber++] = tmp.x;
-                    if(FindIntersection(tArray[i].lines[2], tArray[j].lines[k], &tmp))sliceX[sliceNumber++] = tmp.x;
+                    if(FindIntersection(tArray[i].lines[0], tArray[j].lines[k], &tmp) )sliceX[sliceNumber++] = tmp.x;
+                    if(FindIntersection(tArray[i].lines[1], tArray[j].lines[k], &tmp) )sliceX[sliceNumber++] = tmp.x;
+                    if(FindIntersection(tArray[i].lines[2], tArray[j].lines[k], &tmp) )sliceX[sliceNumber++] = tmp.x;
                 }
             }
         }
         if(sliceNumber >= MaxVertex*MaxVertex)while(1);
+        qsort(sliceX, sliceNumber, sizeof(double), cmp);
         #ifdef DBUGM
             printf("\n---Slice X:\n");
             for(i = 0; i < sliceNumber; i++) printf("%2.2lf ", sliceX[i]);
             printf("\n");
         #endif
-        qsort(sliceX, sliceNumber, sizeof(double), cmp);
 
         int tmpn = sliceNumber;
         sliceNumber = 0;
@@ -236,91 +315,102 @@ int main()
             if(fabs(sliceX[i] - now) < errorT ) continue;
             else {
                 now = sliceX[i];
-                slices[sliceNumber++].x = now;
+                svNumber[sliceNumber] = 0;
+                slices[sliceNumber].x = now;
+                slices[sliceNumber].line.x1 = now;
+                slices[sliceNumber].line.y1 = -200;
+                slices[sliceNumber].line.x2 = now;
+                slices[sliceNumber].line.y2 = 200;
+                slices[sliceNumber].line.z1 = 0, slices[sliceNumber].line.z2 = 0;
+                sliceNumber++;
             }
         }
         if(sliceNumber >= MaxSlice) while(1);
         /*For each slice , sort vertexes on it*/
-        for(i = 0; i < sliceNumber; i++){
-            svNumber[i] = 0;
-            Segment tmpl;
-            tmpl.x1 = slices[i].x;
-            tmpl.y1 = -200;
-            tmpl.x2 = slices[i].x;
-            tmpl.y2 = 200;
-            tmpl.z1 = 0, tmpl.z2 = 0;
-            for(j = 0; j < triangleNumber; j++){
-                for(k = 0; k < 3; k++){
-                    if(FindIntersection(tmpl, tArray[j].lines[k], &slices[i].v[svNumber[i]])) {
-                        slices[i].v[svNumber[i]].triangle = j;
-                        if(fabs(slices[i].x - tArray[j].lines[k].x1) < errorT) slices[i].v[svNumber[i]].kind = 0;
-                        else if(fabs(slices[i].x - tArray[j].lines[k].x2) < errorT) slices[i].v[svNumber[i]].kind = 2;
-                        else slices[i].v[svNumber[i]].kind = 1;
-                        svNumber[i]++;
-                        if(svNumber[i] >= MaxVertex)while(1);
+        for(i = 0; i < triangleNumber; i++){
+            for(j = 0; j < 3; j++){
+                Vertex *tmpp = NULL;
+                for(k = 0; k < sliceNumber; k++){
+                    Segment tmpl;
+                    if(tArray[i].lines[j].x1 > slices[k].x + errorT) continue;
+                    if(tArray[i].lines[j].x2 < slices[k].x - errorT) {
+                        if(tmpp != NULL)
+                            tmpp->hasNext = 0;
+                        break;
+                    }
+                    if(FindIntersection(slices[k].line, tArray[i].lines[j], &slices[k].v[svNumber[k]])){
+                        slices[k].v[svNumber[k]].triangle = i;
+                        if(tmpp != NULL) {
+                            tmpp->hasNext = 1;
+                            tmpp->nx = slices[k].v[svNumber[k]].x;
+                            tmpp->ny = slices[k].v[svNumber[k]].y;
+                            tmpp->nz = slices[k].v[svNumber[k]].z;
+                        }
+                        tmpp = &(slices[k].v[svNumber[k]]);
+                        svNumber[k]++;
+                        if(svNumber[k] >= MaxVertex)while(1);
                     }
                 }
             }
-            qsort(slices[i].v, svNumber[i], sizeof(Vertex), cmpVertex);
         }
+        for(i = 0; i < sliceNumber; i++) qsort(slices[i].v, svNumber[i], sizeof(Vertex), cmpVertex);
         #ifdef DBUGM
         printf("\n------ Slice Vertex ------\n");
         for(i = 0; i < sliceNumber; i++){
             printf("Slice %d: x = %lf\n", i, slices[i].x);
             for(j = 0; j < svNumber[i]; j++){
-                printf("   (%lf %lf %lf) Triangle-k: %d-%d \n", slices[i].v[j].x, slices[i].v[j].y, slices[i].v[j].z, slices[i].v[j].triangle, slices[i].v[j].kind);
+                ShowVertex(slices[i].v[j]);
             }
         }
         #endif
-        /*Between two slices, merge vertexes to get area.*/
+        /*For each slice.*/
             /*When a new vertex(triangle) coming , compare it to the top triangle. only calculate the top one's area*/
             /*When a vertex leave, if it is the top one, extract max to find another top one*/
         double area = 0;
         for(i = 0; i < sliceNumber-1; i++){
-            printf("------ Slice %d -> %d ------\n", i, i+1);
-            int lp = -1, rp = -1;
+            #ifdef DBUGM
+            printf("\n------ Slice %d -> %d : %2.2lf %2.2lf ------\n", i, i+1, slices[i].x, slices[i+1].x);
+            #endif
+            int queue[triangleNumber], qs = 0;
             int valid[triangleNumber];
             for(j = 0; j < triangleNumber; j++) valid[j] = 0;
-            int top =-1;
+            int top = -1;
             Segment tmps1, tmps2;;
-            while(1){
-                /*Get new vertex*/
-                while(++lp < svNumber[i]){
-                    if(slices[i].v[lp].kind != 2) break;
-                }
-                while(++rp < svNumber[i+1]){
-                    if(slices[i+1].v[rp].kind != 0) break;
-                }
-                printf("left right: %d/%d %d/%d, TL TR: %d %d\n", lp, svNumber[i], rp, svNumber[i+1], slices[i].v[lp].triangle, slices[i+1].v[rp].triangle);
-                if(lp == svNumber[i] || rp == svNumber[i+1]) break;
-                if(slices[i].v[lp].triangle != slices[i+1].v[rp].triangle) while(1)printf("lp != rp!!!\n"),exit(1);
-                if(valid[j] == 1){
-                    valid[j] == 0;
+            for(j = 0; j < svNumber[i]; j++){
+                #ifdef DBUGM
+                    printf("  line: %d/%d - Top: %d\n", j, svNumber[i], top);
+                    printf("  Vertex: ");
+                    ShowVertex(slices[i].v[j]);
+                #endif
+
+                if( slices[i].v[j].hasNext == 0)continue;
+                if(top == -1) {
+                    top = 1;
+                    valid[slices[i].v[j].triangle] = 1;
+                    FindLine2(slices[i].v[j], &tmps1);
                     continue;
                 }
-                if(top == -1) {
-                    top = rp;
-                    valid[rp] = 1;
-                    FindLine(slices[i].v[lp], slices[i+1].v[rp], &tmps1);
+                int tmpTop = GetTop(tmps1, slices[i].v[j], valid);
+                #ifdef DBUGM
+                    printf("    Temp Top: %d\n", tmpTop);
+                #endif
+                if(tmpTop == -1) {
+                    tmpTop = 1;
+                    valid[slices[i].v[j].triangle] = 1;
+                    FindLine2(slices[i].v[j], &tmps1);
+                    continue;
                 }
-                else if(top == rp){
-                    FindLine(slices[i].v[lp], slices[i+1].v[rp], &tmps2);
-                    area += CalculateOriginalArea(tmps1, tmps2, slices[i+1].x - slices[i].x, top);
-                    /*Extract max*/
-                    for(j = 0; j < triangleNumber; j++) if(valid[j] == 1){
-                        top = j;
-                        break;
-                    }
-                }
-                else {
-                    valid[rp] = 1;
-                    /*Compare to the top*/
-                    top = rp;
-                }
+                FindLine2(slices[i].v[j], &tmps2);
+                area += CalculateOriginalArea(tmps1, tmps2, slices[i+1].x - slices[i].x, tmpTop);
+                FindLine2(slices[i].v[j], &tmps1);
+                valid[slices[i].v[j].triangle] = !valid[slices[i].v[j].triangle] ;
+
+
             }
         }
-        printf("Case %d: %.2lf\n", caseNumber, area);
+        printf("Case %d: %.2lf\n\n", caseNumber, area);
         caseNumber++;
     }
     return 0;
 }
+
