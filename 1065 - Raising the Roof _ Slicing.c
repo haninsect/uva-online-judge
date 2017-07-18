@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define DBUGM
+#define DBUGM1
 #define LargeINT 1000000000
 #define MaxVertex 3000
 #define MaxSlice 10000
-#define errorT 0.00005
+#define errorT 0.000001
 #define GetCase 500000
 #define M_PI 3.14159265358979323846
-int vertexNumber = 0, triangleNumber = 0;
+/*Struct*/
 typedef struct {
     double x, y, z;
 } Vec;
@@ -37,14 +37,17 @@ typedef struct {
     Segment line;
     Vertex v[MaxVertex];
 } Slice;
-Vertex vArray[300];
-Triangle tArray[1000];
+/*Global variable*/
+int vertexNumber = 0, triangleNumber = 0;
+Vertex vArray[305];
+Triangle tArray[1005];
 
 double sliceX[MaxVertex*MaxVertex];
 int sliceNumber = 0;
 Slice slices[MaxSlice];
 int svNumber[MaxSlice];
 
+/*Function*/
 double VecLen(Vec v)
 {
     return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
@@ -78,8 +81,8 @@ void FindPlane(Triangle* t)
     t->c = c.z;
     t->d = d;
     if(fabs(t->c - 0) < errorT ) t->cos = -1;
+    if(fabs(VecLen(c) - 0) < errorT) while(1);
     t->cos = fabs((t->c)/VecLen(c));
-
 }
 void FindLine2(Vertex a, Segment* line)
 {
@@ -156,7 +159,7 @@ int FindIntersection(Segment edgeA, Segment edgeB, Vertex *v)
         ShowLine(edgeB);
     #endif
 
-     if( fabs(((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1))) < errorT ){
+     if( fabs((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1)) < errorT ){
         return 0;
     }
 
@@ -187,9 +190,10 @@ int cmp(const void *a, const void *b)
 int cmpVertex(const void *a, const void *b)
 {
     Vertex *ap = (Vertex*)a, *bp = (Vertex*)b;
+    if(bp->hasNext - ap->hasNext != 0) return bp->hasNext - ap->hasNext;
     if(fabs(bp->y - ap->y) < errorT && bp->hasNext == 1 && ap->hasNext == 1){
         if(fabs(bp->ny - ap->ny) < errorT) return 0;
-        else if(bp->ny - ap->ny > 0) return 1;
+        else if((bp->ny - ap->ny) > 0) return 1;
         else return -1;
     }
     else if(bp->y - ap->y > 0) return 1;
@@ -199,8 +203,6 @@ int cmpVertex(const void *a, const void *b)
 void ShowTriangle()
 {
     int i, j;
-
-
     for(i = 0; i < triangleNumber; i++){
         printf("T: %d\n", i);
         printf("%2.2lfx + %2.2lfy + %2.2lfz + %2.2lf = 0\n",tArray[i].a, tArray[i].b, tArray[i].c, tArray[i].d);
@@ -226,7 +228,7 @@ double CalculateOriginalArea(Segment s1, Segment s2, double height, int triN)
     #ifdef DBUGM
         printf("      Area: (%2.2lf + %2.2lf)*%2.2lf /2/%2.2lf: %2.2lf\n", f, c, height, tArray[triN].cos, fabs( (f + c) * height/tArray[triN].cos/2));
     #endif
-    return fabs( (f + c) * height/tArray[triN].cos/2);
+    return fabs( ((f + c) * height/2)/tArray[triN].cos);
 }
 int GetAbove(int t1, int t2, Vertex v)
 {
@@ -272,7 +274,6 @@ int main()
 
     while(1){
         scanf("%d%d", &vertexNumber, &triangleNumber);
-        if(caseNumber == GetCase) printf("%d %d %d\n", vertexNumber, triangleNumber);
         if(vertexNumber == 0) break;
         #ifdef DBUGM
             printf("----------- Debug Message %d-----------\n", caseNumber);
@@ -283,9 +284,9 @@ int main()
             ShowTriangle();
             printf("Start Slice:\n");
         #endif
-        /*Find Slices*/
+        /*Find SliceX*/
         for(i = 0; i < triangleNumber; i++){
-            /*3 edge*/
+            /*3 vertex*/
             for(j = 0; j < 3; j++){
                 sliceX[sliceNumber++] = vArray[tArray[i].vIndex[j]].x;
             }
@@ -307,7 +308,7 @@ int main()
             for(i = 0; i < sliceNumber; i++) printf("%2.2lf ", sliceX[i]);
             printf("\n");
         #endif
-
+        /*Remove duplicate X*/
         int tmpn = sliceNumber;
         sliceNumber = 0;
         double now = -1;
@@ -315,12 +316,13 @@ int main()
             if(fabs(sliceX[i] - now) < errorT ) continue;
             else {
                 now = sliceX[i];
+                if(now < 0-errorT) while(1);
                 svNumber[sliceNumber] = 0;
                 slices[sliceNumber].x = now;
                 slices[sliceNumber].line.x1 = now;
-                slices[sliceNumber].line.y1 = -200;
+                slices[sliceNumber].line.y1 = -1000;
                 slices[sliceNumber].line.x2 = now;
-                slices[sliceNumber].line.y2 = 200;
+                slices[sliceNumber].line.y2 = 1000;
                 slices[sliceNumber].line.z1 = 0, slices[sliceNumber].line.z2 = 0;
                 sliceNumber++;
             }
@@ -331,7 +333,6 @@ int main()
             for(j = 0; j < 3; j++){
                 Vertex *tmpp = NULL;
                 for(k = 0; k < sliceNumber; k++){
-                    Segment tmpl;
                     if(tArray[i].lines[j].x1 > slices[k].x + errorT) continue;
                     if(tArray[i].lines[j].x2 < slices[k].x - errorT) {
                         if(tmpp != NULL)
@@ -371,7 +372,6 @@ int main()
             #ifdef DBUGM
             printf("\n------ Slice %d -> %d : %2.2lf %2.2lf ------\n", i, i+1, slices[i].x, slices[i+1].x);
             #endif
-            int queue[triangleNumber], qs = 0;
             int valid[triangleNumber];
             for(j = 0; j < triangleNumber; j++) valid[j] = 0;
             int top = -1;
@@ -394,8 +394,7 @@ int main()
                 #ifdef DBUGM
                     printf("    Temp Top: %d\n", tmpTop);
                 #endif
-                if(tmpTop == -1) {
-                    tmpTop = 1;
+                if(tmpTop == -1){
                     valid[slices[i].v[j].triangle] = 1;
                     FindLine2(slices[i].v[j], &tmps1);
                     continue;
@@ -403,9 +402,7 @@ int main()
                 FindLine2(slices[i].v[j], &tmps2);
                 area += CalculateOriginalArea(tmps1, tmps2, slices[i+1].x - slices[i].x, tmpTop);
                 FindLine2(slices[i].v[j], &tmps1);
-                valid[slices[i].v[j].triangle] = !valid[slices[i].v[j].triangle] ;
-
-
+                valid[slices[i].v[j].triangle] = !valid[slices[i].v[j].triangle];
             }
         }
         printf("Case %d: %.2lf\n\n", caseNumber, area);
