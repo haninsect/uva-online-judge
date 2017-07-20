@@ -47,124 +47,115 @@ void Read()
     }
     return;
 }
-int CheckOutside(int nowP[3])
+int CheckOutside()
 {
     int i;
     for(i = 0; i < 3; i++){
-        if(nowP[i] > size[i] || nowP[i] <= 0) return 1;
+        if(enterP[i] > size[i] || enterP[i] <= 0) return 1;
     }
     return 0;
 }
-int Move(int nowP[3], int nowD, int step)
+int Move(int step)
 {
     int i, j;
     for(j = 0; j < step; j++){
         for(i = 0; i < 3; i++){
-            nowP[i] += delta[iTod[nowD+3]][i];
+            enterP[i] += delta[iTod[enterD+3]][i];
         }
         #ifdef DBUGM
-            printf("Next Point (%d %d %d): %d\n", nowP[0], nowP[1], nowP[2], nowD);
+            printf("Next Point (%d %d %d): %d\n", enterP[0], enterP[1], enterP[2], enterD);
         #endif
-        if(CheckOutside(nowP) == 1) {
+        if(CheckOutside() == 1) {
             #ifdef DBUGM
-                printf("Outside\n");
+                printf("Outside %d\n", j);
             #endif
+            for(i = 0; i < 3; i++){
+                enterP[i] += delta[iTod[-enterD+3]][i];
+            }
             return j;
         }
-        if(table[nowP[0]][nowP[1]][nowP[2]] == 1) {
+        if(table[enterP[0]][enterP[1]][enterP[2]] == 1) {
             #ifdef DBUGM
                 printf("Overlap\n");
             #endif
+            for(i = 0; i < 3; i++){
+                enterP[i] += delta[iTod[-enterD+3]][i];
+            }
             return j;
         }
-        table[nowP[0]][nowP[1]][nowP[2]] = 1;
+        table[enterP[0]][enterP[1]][enterP[2]] = 1;
     }
     return j;
 }
-void MoveBack(int nowP[3], int nowD, int step)
+void MoveBack(int step)
 {
     int i, j;
     for(j = 0; j < step; j++){
-        table[nowP[0]][nowP[1]][nowP[2]] = 0;
+        table[enterP[0]][enterP[1]][enterP[2]] = 0;
         for(i = 0; i < 3; i++){
-            nowP[i] += delta[iTod[nowD+3]][i];
+            enterP[i] += delta[iTod[enterD+3]][i];
         }
+        #ifdef DBUGM
+            printf("Back Point (%d %d %d): %d\n", enterP[0], enterP[1], enterP[2], enterD);
+        #endif
     }
     return;
 }
-void DFS(int used, int nowP[3], int nowD)
+void DFS(int used)
 {
     #ifdef DBUGM
         printf("----------- DFS %d/%d-----------\n", used, min);
-        printf("(%d %d %d): %d  -> (%d %d %d): %d \n", nowP[0], nowP[1], nowP[2], nowD, exitP[0], exitP[1], exitP[2], exitD);
+        printf("(%d %d %d): %d  -> (%d %d %d): %d \n", enterP[0], enterP[1], enterP[2], enterD, exitP[0], exitP[1], exitP[2], exitD);
     #endif
-    int i, j, k, c;
+    int i, j, k;
     /*Goal !*/
-    int flag = (nowD == exitD);
+    int flag = (enterD == exitD);
     for(i = 0; i < 3 && flag == 1; i++){
-        if(nowP[i] != exitP[i]) flag = 0;
+        if(enterP[i] != exitP[i]) flag = 0;
     }
     if(flag == 1){
         if(used < min) min = used;
         return;
     }
     if(used > min || used >= 6) return;
-
-    /*Open 1*/
+    int tmpD = enterD;
+    /*2 type*/
         /*4 direction*/
-    for(c = 0; c < 6; c++){
-        if(dIndex[c] == nowD || dIndex[c] == -nowD) continue;
-        int tmpP[3], tmpD = nowD;
-        for(j = 0; j < 3; j++) tmpP[j] = nowP[j];
-        int moves;
-        if(moves = Move(tmpP, tmpD, 2) != 2) {
+    int type = 0;
+    int step[2][2] = {{2, 2},{3, 1}};
+    while(type < 2){
+        for(i = 0; i < 6; i++){
             #ifdef DBUGM
-                printf("InValid move 1-1\n");
+                printf("Used %d Type %d %d\n", used, type, i);
             #endif
-            MoveBack(tmpP, -nowD, moves);
-            continue;
+            if(dIndex[i] == enterD || dIndex[i] == -enterD) continue;
+            int moves = Move(step[type][0]);
+            if(moves != step[type][0]) {
+                #ifdef DBUGM
+                    printf("InValid move 1-1\n");
+                #endif
+                enterD = -tmpD;
+                MoveBack(moves);
+                enterD = tmpD;
+                continue;
+            }
+            enterD = dIndex[i];
+            moves = Move(step[type][1]);
+            if(moves == step[type][1]) DFS(used+1);
+            else {
+                #ifdef DBUGM
+                    printf("InValid move 1-2 %d\n", enterD);
+                #endif
+            }
+            enterD = -enterD;
+            MoveBack(moves);
+            enterD = -tmpD;
+            MoveBack(step[type][0]);
+            enterD = tmpD;
         }
-        tmpD = dIndex[c];
-        if(moves = Move(tmpP, tmpD, 2) != 2) {
-            #ifdef DBUGM
-                printf("InValid move 1-2\n");
-            #endif
-            MoveBack(tmpP, -tmpD, 2);
-            MoveBack(tmpP, -nowD, moves);
-            continue;
-        }
-        DFS(used+1, tmpP, tmpD);
-        MoveBack(tmpP, -tmpD, 2);
-        MoveBack(tmpP, -nowD, 2);
+        type++;
     }
-    /*Open 2*/
-        /*4 direction*/
-    for(c = 0; c < 6; c++){
-        if(dIndex[c] == nowD || dIndex[c] == -nowD) continue;
 
-        int tmpP[3], tmpD = nowD;
-        for(j = 0; j < 3; j++) tmpP[j] = nowP[j];
-        int moves;
-        if(moves = Move(tmpP, tmpD, 3) != 3) {
-            #ifdef DBUGM
-                 printf("InValid move 2-1\n");
-            #endif
-            MoveBack(tmpP, -nowD, moves);
-            continue;
-        }
-        tmpD = dIndex[c];
-        if(moves = Move(tmpP, tmpD, 1) != 1) {
-            #ifdef DBUGM
-                printf("InValid move 2-2\n");
-            #endif
-            MoveBack(tmpP, -tmpD, moves);
-            MoveBack(tmpP, -nowD, 3);
-            continue;
-        }
-        DFS(used+1, tmpP, tmpD);
-        MoveBack(tmpP, -tmpD, 1);
-        MoveBack(tmpP, -nowD, 3);
-    }
     #ifdef DBUGM
         printf("back\n");
     #endif
@@ -186,7 +177,7 @@ int main()
         #ifdef DBUGM
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
-        DFS(0, enterP, enterD);
+        DFS(0);
         if(min == LargeINT) printf("Case %d: Impossible\n", caseNumber++);
         else printf("Case %d: %d\n", caseNumber++, min);
 
