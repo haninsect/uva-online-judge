@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define DBUGM_Vec
-#define DBUGM_Line
+#define DBUGM_Vec1
+#define DBUGM_Line1
+#define DBUGM_BAB
+#define DBUGM1
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
@@ -34,7 +36,8 @@ typedef struct {
 
 int circleNumber;
 Circle circles[MaxcircleNumber];
-int start, end, limit;
+int start, end;
+double limit;
 Edge edgeTable[MaxcircleNumber][MaxcircleNumber];
 int shortestPath[MaxcircleNumber][MaxcircleNumber];
 double minLen;
@@ -80,7 +83,7 @@ void Read()
             exit(1);
         }
     }
-    scanf("%lf%lf%lf", &start, &end, &limit);
+    scanf("%d%d%lf", &start, &end, &limit);
 
 }
 void FindLine(Point a, Point b, Segment* line)
@@ -113,7 +116,6 @@ void RotaeVec(Vec v, double CosTheta, int direction, Vec *rv, double len)
     double vlen = sqrt(rv->x*rv->x + rv->y*rv->y);
     rv->x = len*(rv->x/vlen);
     rv->y = len*(rv->y/vlen);
-    ShowVec(*rv);
     #ifdef DBUGM_Vec
         ShowVec(*rv);
     #endif
@@ -148,6 +150,8 @@ void CheckValid(int r1, int r2)
     }
     #ifdef DBUGM_Line
         printf("Find Common Tangent %d -> %d, valid: %d\n\t", r1, r2, edgeTable[r1][r2].isValid);
+        ShowCircle(circles[r1]);
+        ShowCircle(circles[r2]);
         ShowLine(edgeTable[r1][r2].cutLine);
     #endif
 
@@ -158,8 +162,6 @@ double FindCommonTangent(int r1, int r2)
     /*Radius1 < Radius2*/
     double c1c2 = sqrt((circles[r2].center.y - circles[r1].center.y)*(circles[r2].center.y - circles[r1].center.y) + (circles[r2].center.x - circles[r1].center.x)*(circles[r2].center.x - circles[r1].center.x));
     Vec oV1, iV2, oV2, iV1;
-    ShowCircle(circles[r1]);
-    ShowCircle(circles[r2]);
     if(circles[r1].direction * circles[r2].direction > 0) {
         /*Outer Common Tangent */
         double CosTheta = (fabs(circles[r2].radius - circles[r1].radius))/c1c2;
@@ -223,18 +225,46 @@ int FindIntersection(Segment edgeA, Segment edgeB)
     if(ppB > 1+errorT || ppB < 0-errorT || ppA > 1+errorT || ppA < 0-errorT) return 0;
     else return 1;
 }
-void BranchAndBound(int nowC, int valid[circleNumber], int nowLen)
+double CalculateArc(int c1, Segment s1, Segment s2)
 {
+    double theta1 = atan2(s1.y2 - circles[c1].center.y, s1.x2 - circles[c1].center.x)*180/M_PI;
+    if(theta1 < 0-errorT) theta1 = theta1+360;
+    double theta2 = atan2(s2.y1 - circles[c1].center.y, s2.x1 - circles[c1].center.x)*180/M_PI;
+    if(theta2 < 0-errorT) theta2 = theta2+360;
+    printf("%lf %lf\n", s1.x2 - circles[c1].center.x, s1.y2 - circles[c1].center.y);
+    printf("%lf %lf\n", s2.x1 - circles[c1].center.x, s2.y1 - circles[c1].center.y);
+    printf("%lf %lf\n", theta1, theta2);
+    return circles[c1].radius*2*M_PI*((theta1-theta2)*(-circles[c1].direction)/360);
+}
+void BranchAndBound(int nowC, int valid[circleNumber], int edges[circleNumber][2], int chosed, double nowLen)
+{
+    #ifdef DBUGM_BAB
+        printf("\n---- BranchAndBound: now: %d, target: %d chosed: %d len: %2.2lf\n", nowC, end, chosed, nowLen);
+    #endif
     if(nowLen >= minLen) return;
+    if(valid[end] == 0) {
+        if(nowLen < minLen) minLen = nowLen;
+        return;
+    }
     int i, j;
     for(i = 0; i < circleNumber; i++){
         if(valid[i] == 0) continue;
         if(edgeTable[nowC][i].isValid == 0) continue;
-        for(j = 0; j < c)
-        if()
+        if(nowLen + shortestPath[nowC][i] >= minLen) continue;
+        int flag = 1;
+        for(j = 0; j < chosed && flag == 1; j++){
+            if(FindIntersection(edgeTable[nowC][i].cutLine, edgeTable[edges[j][0]][edges[j][1]].cutLine) == 1) flag = 0;
+        }
+        if(flag == 0) continue;
         else {
-            if(nowLen + shortestPath[nowC][i] >= minLen) continue;
-
+            edges[chosed][0] = nowC;
+            edges[chosed][1] = i;
+            valid[i] = 0;
+            double arc;
+            if( nowC == start) arc = 0;
+            else arc = CalculateArc(nowC,  edgeTable[edges[chosed-1][0]][edges[chosed-1][1]].cutLine, edgeTable[nowC][i].cutLine);
+            BranchAndBound(i, valid, edges, chosed+1, nowLen + edgeTable[nowC][i].cutLine.len + arc);
+            valid[i] = 1;
         }
     }
 }
@@ -269,7 +299,10 @@ int main()
         int valid[circleNumber];
         for(i = 0; i < circleNumber; i++) valid[i] = 1;
         valid[start] = 0;
-        BranchAndBound(start, valid, 0);
+        int edges[circleNumber][2];
+        BranchAndBound(start, valid, edges, 0, 0);
+        if( fabs(minLen - LargeINT) < errorT ) printf("Case %d: Cannot reach destination shaft\n", caseNumber);
+        else printf("Case %d: length = %.2lf\n", caseNumber, minLen);
         caseNumber++;
     }
     return 0;
