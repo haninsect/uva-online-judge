@@ -5,7 +5,7 @@
 #include <string.h>
 #define DBUGM_Vec1
 #define DBUGM_Line1
-#define DBUGM_BAB
+#define DBUGM_BAB1
 #define DBUGM1
 #define LargeINT 1000000000
 #define errorT 0.000001
@@ -84,6 +84,7 @@ void Read()
         }
     }
     scanf("%d%d%lf", &start, &end, &limit);
+    /*printf("%d %d %lf\n", start, end, limit);*/
 
 }
 void FindLine(Point a, Point b, Segment* line)
@@ -231,10 +232,21 @@ double CalculateArc(int c1, Segment s1, Segment s2)
     if(theta1 < 0-errorT) theta1 = theta1+360;
     double theta2 = atan2(s2.y1 - circles[c1].center.y, s2.x1 - circles[c1].center.x)*180/M_PI;
     if(theta2 < 0-errorT) theta2 = theta2+360;
-    printf("%lf %lf\n", s1.x2 - circles[c1].center.x, s1.y2 - circles[c1].center.y);
-    printf("%lf %lf\n", s2.x1 - circles[c1].center.x, s2.y1 - circles[c1].center.y);
-    printf("%lf %lf\n", theta1, theta2);
-    return circles[c1].radius*2*M_PI*((theta1-theta2)*(-circles[c1].direction)/360);
+    double delta;
+    if(circles[c1].direction == 1){
+        delta = theta2 - theta1;
+        if(delta < 0) delta += 360;
+    }
+    else {
+        delta = theta1 - theta2;
+        if(delta < 0) delta += 360;
+    }
+    #ifdef DBUGM
+        printf("%lf %lf\n", s1.x2 - circles[c1].center.x, s1.y2 - circles[c1].center.y);
+        printf("%lf %lf\n", s2.x1 - circles[c1].center.x, s2.y1 - circles[c1].center.y);
+        printf("%lf %lf\n", theta1, theta2);
+    #endif
+    return circles[c1].radius*2*M_PI*((delta)/360);
 }
 void BranchAndBound(int nowC, int valid[circleNumber], int edges[circleNumber][2], int chosed, double nowLen)
 {
@@ -268,11 +280,21 @@ void BranchAndBound(int nowC, int valid[circleNumber], int edges[circleNumber][2
         }
     }
 }
+void Round(char output[256], double minLen)
+{
+    sprintf(output, "%.2lf", minLen);
+    int len = strlen(output);
+    if(output[len-1] == '0'){
+        output[len-1] = '\0';
+        output[len-2] = '\0';
+        output[len-3] = '\0';
+    }
+}
 int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+        freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
@@ -301,8 +323,12 @@ int main()
         valid[start] = 0;
         int edges[circleNumber][2];
         BranchAndBound(start, valid, edges, 0, 0);
-        if( fabs(minLen - LargeINT) < errorT ) printf("Case %d: Cannot reach destination shaft\n", caseNumber);
-        else printf("Case %d: length = %.2lf\n", caseNumber, minLen);
+        if( fabs(minLen - LargeINT) < errorT || fabs(minLen - 0) < errorT ) printf("Case %d: Cannot reach destination shaft\n", caseNumber);
+        else {
+            char output[256] = {'\0'};
+            Round(output, minLen);
+            printf("Case %d: length = %s\n", caseNumber, output);
+        }
         caseNumber++;
     }
     return 0;
