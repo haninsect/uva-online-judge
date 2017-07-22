@@ -164,7 +164,7 @@ int ConstructTree()
     tree[1].isValid = 1;
     for(i = 0; i < size; i++){
         int node = 1;
-        if(strlen(input[i]) >= 7) return 0;
+        if(strlen(input[i]) >= 10) return 0;
         for(j = 0; j < strlen(input[i]); j++){
             if(input[i][j] == '0') node = 2*node +1;
             else node = 2*node;
@@ -178,7 +178,7 @@ int ConstructTree()
 int main()
 {
     #ifndef ONLINE_JUDGE
-		//freopen("input.in", "r", stdin);
+		freopen("input.in", "r", stdin);
 		//freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
