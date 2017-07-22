@@ -8,7 +8,7 @@
 #define DBUGM_BAB1
 #define DBUGM1
 #define LargeINT 1000000000
-#define errorT 0.000001
+#define errorT 0.00000000001
 #define M_PI 3.14159265358979323846
 #define MaxcircleNumber 25
 typedef struct {
@@ -53,7 +53,7 @@ void ShowCircle(Circle c1)
 }
 void ShowLine(Segment edgeA)
 {
-    printf("Line: (%2.2lf, %2.2lf) -> (%2.2lf, %2.2lf)\n", edgeA.x1, edgeA.y1, edgeA.x2, edgeA.y2);
+    printf("Line: (%2.2lf, %2.2lf) -> (%2.2lf, %2.2lf): %lf\n", edgeA.x1, edgeA.y1, edgeA.x2, edgeA.y2, edgeA.len);
 }
 void ShowPoint(Point v)
 {
@@ -61,12 +61,12 @@ void ShowPoint(Point v)
 }
 int Max(int c1, int c2)
 {
-    if(circles[c1].radius > circles[c2].radius) return c1;
+    if(circles[c1].radius > circles[c2].radius-errorT) return c1;
     else return c2;
 }
 int Min(int c1, int c2)
 {
-    if(circles[c1].radius < circles[c2].radius) return c1;
+    if(circles[c1].radius < circles[c2].radius-errorT) return c1;
     else return c2;
 }
 void Read()
@@ -137,7 +137,7 @@ void CheckValid(int r1, int r2)
     /*Check Valid*/
     int i, j;
     int valid = 1;
-    if(edgeTable[r1][r2].cutLine.len >= limit-errorT) valid = 0;
+    if(edgeTable[r1][r2].cutLine.len > limit+errorT) valid = 0;
     for(i = 0; i < circleNumber && valid == 1; i++){
         if(CheckCross(circles[i], edgeTable[r1][r2].cutLine) == 1) valid = 0;
     }
@@ -150,7 +150,7 @@ void CheckValid(int r1, int r2)
         shortestPath[r1][r2] = 0;
     }
     #ifdef DBUGM_Line
-        printf("Find Common Tangent %d -> %d, valid: %d\n\t", r1, r2, edgeTable[r1][r2].isValid);
+        printf("Find Common Tangent %d -> %d, valid: %d\n", r1, r2, edgeTable[r1][r2].isValid);
         ShowCircle(circles[r1]);
         ShowCircle(circles[r2]);
         ShowLine(edgeTable[r1][r2].cutLine);
@@ -200,7 +200,8 @@ void FindEdges()
     int i, j;
     for(i = 0; i < circleNumber-1; i++){
         for(j = i+1; j < circleNumber; j++){
-            FindCommonTangent(Min(i, j), Max(i, j));
+            if(fabs(circles[i].radius - circles[j].radius) < 0) FindCommonTangent(i, j);
+            else FindCommonTangent(Min(i, j), Max(i, j));
         }
     }
 }
