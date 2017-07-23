@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define DBUGM1
+#define DBUGM
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
@@ -58,7 +58,6 @@ void Read()
     crtLen = 0;
     wrgLen = 0;
     mode = 0;
-
     for(i = 0; i < ncp; i++){
         int cp;
         scanf("%d", &cp);
@@ -66,7 +65,7 @@ void Read()
     }
     for(i = 0; i < nroad; i++){
         int a, b, adir, bdir, len;
-        scanf("%d%d%d%d%d%d", &a, &b, &adir, &bdir, &len);
+        scanf("%d%d%d%d%d", &a, &b, &adir, &bdir, &len);
         AddRoad(a, b, adir, bdir, len, i);
         AddRoad(b, a, bdir, adir, len, i);
         roadIndex[i].a = a;
@@ -112,10 +111,12 @@ void Move(int now, Road r)
         if(now != roadIndex[r.index].a) tr = roadIndex[r.index].bn;
         ActiveMode(now, r.target, tr);
     }
+    printf("%d\n", r.dir);
     Simulate(r.target, r.dir);
 }
 void Back(int backLen)
 {
+    int i;
     for(i = ansNumber-1; ansRoad[i] != backPoint; i--){
         ansNumber--;
         wrgLen -= roadIndex[ansRoad[i]].len;
@@ -127,6 +128,7 @@ void Back(int backLen)
 int FindRoad(int now, int dir)
 {
     /*mode == 1, set the road chose inValid*/
+    int i;
     int returRoad = -1;
     if(mode == 1 && now == backPoint) {
 
@@ -134,9 +136,22 @@ int FindRoad(int now, int dir)
         validRoad[returRoad] = 0;
     }
     else {
-
+        int minTheta = LargeINT;
+        for(i = 0; i < roadNumber[now]; i++){
+            if(abs(dir - roads[now][i].theta) < minTheta){
+                minTheta = abs(dir - roads[now][i].theta);
+                returRoad = i;
+            }
+            else if(abs(dir - roads[now][i].theta) == minTheta){
+                if(dir - roads[now][i].theta < 0){ /*rightmost*/
+                    minTheta = abs(dir - roads[now][i].theta);
+                    returRoad = i;
+                }
+            }
+        }
     }
     /*Return -1 as no road valid*/
+    return returRoad;
 }
 void Simulate(int now, int dir)
 {
@@ -193,7 +208,7 @@ int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
