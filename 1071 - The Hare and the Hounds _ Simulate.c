@@ -7,8 +7,8 @@
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
-#define MaxRoad 200
-#define MaxIntersection 105
+#define MaxRoad 400
+#define MaxIntersection 250
 typedef struct {
     int index;
     int target;
@@ -93,8 +93,8 @@ void ActiveMode(int now, int target, int tR, int rBack)
     backPoint = target;
     restMove = limit;
     int i;
+    for(i = 0; i < MaxRoad; i++) validRoad[i] = 0;
     for(i = 0; i < roadNumber[target]; i++) validRoad[i] = 1;
-    for(; i < MaxRoad; i++) validRoad[i] = 0;
     validRoad[tR] = 0;
 }
 void UpdataAns(Road r)
@@ -136,10 +136,14 @@ int FindRoad(int now, int dir)
 
     if(mode == 1 && now == backPoint) {
         int minTheta = LargeINT;
+        int c = 0;
         for(i = 0; i < roadNumber[now]; i++){
-            if(validRoad[i] == 0) continue;
+            if(validRoad[i] == 0) {
+                c++;
+                continue;
+            }
             int theta = abs(dir - roads[now][i].theta);
-            if(abs(dir - roads[now][i].theta) > 180) theta = 360 - abs(dir - roads[now][i].theta);
+            if(abs(dir - roads[now][i].theta) >= 180) theta = 360 - abs(dir - roads[now][i].theta);
             if(theta < minTheta){
                 minTheta = theta;
                 returRoad = i;
@@ -154,6 +158,7 @@ int FindRoad(int now, int dir)
                 printf("%d: Tmp road: %d, theta: %d\n", i, returRoad, theta);
             #endif
         }
+        if(returRoad == -1 && c == roadNumber[now]) exit(1);
         roadChosen = returRoad;
         validRoad[returRoad] = 0;
     }
@@ -161,7 +166,7 @@ int FindRoad(int now, int dir)
         int minTheta = LargeINT;
         for(i = 0; i < roadNumber[now]; i++){
             int theta = abs(dir - roads[now][i].theta);
-            if(abs(dir - roads[now][i].theta) > 180) theta = 360 - abs(dir - roads[now][i].theta);
+            if(abs(dir - roads[now][i].theta) >= 180) theta = 360 - abs(dir - roads[now][i].theta);
             if(theta < minTheta){
                 minTheta = theta;
                 returRoad = i;
@@ -176,6 +181,7 @@ int FindRoad(int now, int dir)
                 printf("Tmp road: %d, theta: %d\n", returRoad, theta);
             #endif
         }
+        /*if(returRoad == -1 &&mode != 1) exit(1);*/
     }
     /*Return -1 as no road valid*/
     #ifdef DBUGM
@@ -241,6 +247,7 @@ void ShowRoad()
         printf("--- Intersection: %d: ---\n", i);
         for(j = 0; j < roadNumber[i]; j++){
             printf("target: %d, theta: %d, direction: %d\n", roads[i][j].target, roads[i][j].theta, roads[i][j].dir);
+            if(roads[i][j].hasMarker) printf("Has Marker in : %d\n", roads[i][j].markerLocation);
         }
     }
 }
