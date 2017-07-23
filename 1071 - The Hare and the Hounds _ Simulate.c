@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define DBUGM
+#define DBUGM1
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
@@ -26,7 +26,7 @@ typedef struct {
 } Index;
 
 int ncp, nroad, ncm, limit, start, end, sdir;
-int mode, restMove, backPoint, validRoad[MaxRoad], roadChosen;
+int mode, restMove, backPoint, validRoad[MaxRoad], roadChosen, roadBack;
 int isChoicePoint[MaxIntersection];
 Road roads[MaxIntersection][MaxRoad];
 int roadNumber[MaxIntersection];
@@ -63,7 +63,7 @@ void Read()
         scanf("%d", &cp);
         isChoicePoint[cp] = 1;
     }
-    for(i = 0; i < nroad; i++){
+    for(i = 1; i <= nroad; i++){
         int a, b, adir, bdir, len;
         scanf("%d%d%d%d%d", &a, &b, &adir, &bdir, &len);
         AddRoad(a, b, adir, bdir, len, i);
@@ -86,10 +86,11 @@ void Read()
         roads[roadIndex[r].b][roadIndex[r].bn].markerLocation = roads[roadIndex[r].a][roadIndex[r].an].len - len;
     }
 }
-void ActiveMode(int now, int target, int tR)
+void ActiveMode(int now, int target, int tR, int rBack)
 {
-    backPoint = now;
     mode = 1;
+    roadBack = rBack;
+    backPoint = target;
     restMove = limit;
     int i;
     for(i = 0; i < roadNumber[target]; i++) validRoad[i] = 1;
@@ -108,18 +109,17 @@ void Move(int now, Road r)
     UpdataAns(r);
     if(isChoicePoint[r.target] == 1){
         int tr = roadIndex[r.index].an;
-        if(now != roadIndex[r.index].a) tr = roadIndex[r.index].bn;
-        ActiveMode(now, r.target, tr);
+        if(now == roadIndex[r.index].a) tr = roadIndex[r.index].bn;
+        ActiveMode(now, r.target, tr, r.index);
     }
-    printf("%d\n", r.dir);
     Simulate(r.target, r.dir);
 }
 void Back(int backLen)
 {
     int i;
-    for(i = ansNumber-1; ansRoad[i] != backPoint; i--){
+    for(i = ansNumber-1; ansRoad[i] != roadBack; i--){
         ansNumber--;
-        wrgLen -= roadIndex[ansRoad[i]].len;
+        crtLen -= roadIndex[ansRoad[i]].len;
     }
     restMove = limit;
     wrgLen += backLen;
@@ -130,33 +130,63 @@ int FindRoad(int now, int dir)
     /*mode == 1, set the road chose inValid*/
     int i;
     int returRoad = -1;
-    if(mode == 1 && now == backPoint) {
+    #ifdef DBUGM
+        printf("Find Mode: %d backPoint: %d\n", mode, backPoint);
+    #endif
 
+    if(mode == 1 && now == backPoint) {
+        int minTheta = LargeINT;
+        for(i = 0; i < roadNumber[now]; i++){
+            if(validRoad[i] == 0) continue;
+            int theta = abs(dir - roads[now][i].theta);
+            if(abs(dir - roads[now][i].theta) > 180) theta = 360 - abs(dir - roads[now][i].theta);
+            if(theta < minTheta){
+                minTheta = theta;
+                returRoad = i;
+            }
+            else if(theta == minTheta){
+                if(roads[now][i].theta + 360 - dir == theta || roads[now][i].theta - dir == theta){ /*rightmost*/
+                    minTheta = abs(dir - roads[now][i].theta);
+                    returRoad = i;
+                }
+            }
+            #ifdef DBUGM
+                printf("%d: Tmp road: %d, theta: %d\n", i, returRoad, theta);
+            #endif
+        }
         roadChosen = returRoad;
         validRoad[returRoad] = 0;
     }
     else {
         int minTheta = LargeINT;
         for(i = 0; i < roadNumber[now]; i++){
-            if(abs(dir - roads[now][i].theta) < minTheta){
-                minTheta = abs(dir - roads[now][i].theta);
+            int theta = abs(dir - roads[now][i].theta);
+            if(abs(dir - roads[now][i].theta) > 180) theta = 360 - abs(dir - roads[now][i].theta);
+            if(theta < minTheta){
+                minTheta = theta;
                 returRoad = i;
             }
-            else if(abs(dir - roads[now][i].theta) == minTheta){
-                if(dir - roads[now][i].theta < 0){ /*rightmost*/
+            else if(theta == minTheta){
+                if(roads[now][i].theta + 360 - dir == theta || roads[now][i].theta - dir == theta){ /*rightmost*/
                     minTheta = abs(dir - roads[now][i].theta);
                     returRoad = i;
                 }
             }
+            #ifdef DBUGM
+                printf("Tmp road: %d, theta: %d\n", returRoad, theta);
+            #endif
         }
     }
     /*Return -1 as no road valid*/
+    #ifdef DBUGM
+        printf("   Find Road %d, target: %d, dir: %d\n", returRoad, roads[now][returRoad].target, roads[now][returRoad].theta);
+    #endif
     return returRoad;
 }
 void Simulate(int now, int dir)
 {
     #ifdef DBUGM
-        printf("----------- Simulate %d %d-----------\n", now, dir);
+        printf("\n----------- Simulate %d %d %d-----------\n", now, dir, mode);
     #endif
     if(now == end && mode == 0) return;
 
@@ -204,6 +234,16 @@ void Simulate(int now, int dir)
         }
     }
 }
+void ShowRoad()
+{
+    int i, j;
+    for(i = 1; i < 5; i++){
+        printf("--- Intersection: %d: ---\n", i);
+        for(j = 0; j < roadNumber[i]; j++){
+            printf("target: %d, theta: %d, direction: %d\n", roads[i][j].target, roads[i][j].theta, roads[i][j].dir);
+        }
+    }
+}
 int main()
 {
     #ifndef ONLINE_JUDGE
@@ -217,10 +257,16 @@ int main()
         if(ncp == 0 && nroad == 0) break;
         Read();
         #ifdef DBUGM
+            ShowRoad();
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         Simulate(start, sdir);
-
+        printf("Case %d:\n", caseNumber);
+        printf("   Length of hare's route is %d\n", crtLen);
+        printf("   Length of hound's search is %d\n", wrgLen);
+        printf("   Route:");
+        for(i = 0; i < ansNumber; i++) printf(" %d", ansRoad[i]);
+        printf("\n\n");
         caseNumber++;
     }
     return 0;
