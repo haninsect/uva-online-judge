@@ -5,50 +5,38 @@
 #include <math.h>
 #include <map>
 #define DBUGM
+#define DBUGM_Inters1
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
 #define MaxTriangle 100005
 using namespace std;
 
+struct Index {
+    double x, y;
+    int index;
+};
 struct Point {
     double x, y;
-    int tirangle;
+    int triangle;
     int iEdges[2];
     int iN;
     int dEdges[2];
     int dN;
 };
 struct Edge {
-    int tirangle;
+    int triangle;
     int lPoint;
     int rPoint;
-    struct equation {
-        /*a1*x + b1*y + c1 = 0, a1 >= 0*/
-        double a1, b1, c1;
-        int Upper(Point& p){
-            if(fabs(b1 - 0) < errorT) return -1;
-            if(fabs(a1 - 0) < errorT) {
-                if(b1*p.y + c1 > 0) return true;
-                else return false;
-            }
-            else {
-                if(b1 > 0) {
-                    if(a1*p.x + b1*p.y + c1 > 0) return true;
-                    else return false;
-                }
-                else {
-                    if(a1*p.x + b1*p.y + c1 < 0) return true;
-                    else return false;
-                }
-            }
-        }
-    };
-    equation eqt;
+    double x1, y1;
+    double x2, y2;
+    /*a1*x + b1*y + c1 = 0, a1 >= 0*/
+    double a1, b1, c1;
 };
 
 int  triangleN;
-Point points[MaxTriangle];
+Point points[MaxTriangle*3];
+Index sortedIndex[MaxTriangle*3];
 int pNumber;
 Edge edges[MaxTriangle*3];
 int eNumber;
@@ -57,31 +45,49 @@ int veNumber;
 bool isIntersection;
 int maxLevel;
 
+int Upper(const Point& p, const Edge& e)
+{
+    if(fabs(e.b1 - 0) < errorT) return -1;
+    if(fabs(e.a1 - 0) < errorT) {
+        if(e.b1*p.y + e.c1 > 0) return 1;
+        else return 0;
+    }
+    else {
+        if(e.b1 > 0) {
+            if(e.a1*p.x + e.b1*p.y + e.c1 > 0) return 1;
+            else return 0;
+        }
+        else {
+            if(e.a1*p.x + e.b1*p.y + e.c1 < 0) return 1;
+            else return 0;
+        }
+    }
+}
 struct  mySort
 {
    bool operator() (const Edge &edgeA, const Edge &edgeB) const
    {
-      if(edgeA.tirangle == edgeB.tirangle){
+      if(edgeA.triangle == edgeB.triangle){
         double midA, midB;
         midA = (points[edgeA.lPoint].y + points[edgeA.rPoint].y)/2;
         midB = (points[edgeB.lPoint].y + points[edgeB.rPoint].y)/2;
-        if(midA < midB) return true;
-        else return false;
+        if(midA < midB) return false;
+        else return true;
       }
       else {
         if(points[edgeA.lPoint].x > points[edgeB.lPoint].x) {
-            if(edgeB.eqt.Upper(points[edgeA.lPoint]) == 1) return true;
+            if(Upper(points[edgeA.lPoint], edgeB) == 1) return true;
             else return false;
         }
         else {
-            if(edgeA.eqt.Upper(points[edgeB.lPoint]) == 1) return false;
+            if(Upper(points[edgeB.lPoint], edgeA) == 1) return false;
             else return true;
         }
       }
    }
 };
 map<Edge, int, mySort> mapTree;
-
+typedef map<Edge, int, mySort>::iterator ITER;
 void AddEdge(int p1, int p2, int tiangle)
 {
     if(fabs(points[p1].x - points[p2].x) < errorT) {/*Vertical Line*/
@@ -91,9 +97,11 @@ void AddEdge(int p1, int p2, int tiangle)
         }
         verticalE[veNumber].lPoint = p1;
         verticalE[veNumber].rPoint = p2;
-        verticalE[veNumber].eqt.a1 = 1;
-        verticalE[veNumber].eqt.b1 = 0;
-        verticalE[veNumber].eqt.c1 = -points[p1].x;
+        verticalE[veNumber].x1 = points[p1].x, verticalE[veNumber].y1 = points[p1].y;
+        verticalE[veNumber].x2 = points[p2].x, verticalE[veNumber].y2 = points[p2].y;
+        verticalE[veNumber].a1 = 1;
+        verticalE[veNumber].b1 = 0;
+        verticalE[veNumber].c1 = -points[p1].x;
         veNumber++;
         return;
     }
@@ -101,16 +109,18 @@ void AddEdge(int p1, int p2, int tiangle)
         AddEdge(p2, p1, triangleN);
         return;
     }
-    edges[eNumber].tirangle = tiangle;
+    edges[eNumber].triangle = tiangle;
     edges[eNumber].lPoint = p1;
     edges[eNumber].rPoint = p2;
-    edges[eNumber].eqt.a1 = points[p2].y - points[p1].y;
-    edges[eNumber].eqt.b1 = points[p1].x - points[p2].x;
-    edges[eNumber].eqt.c1 = points[p2].x*points[p1].y - points[p1].x*points[p2].y;
-    if(edges[eNumber].eqt.a1 < 0) {
-        edges[eNumber].eqt.a1 *= -1;
-        edges[eNumber].eqt.b1 *= -1;
-        edges[eNumber].eqt.c1 *= -1;
+    edges[eNumber].x1 = points[p1].x, edges[eNumber].y1 = points[p1].y;
+    edges[eNumber].x2 = points[p2].x, edges[eNumber].y2 = points[p2].y;
+    edges[eNumber].a1 = points[p2].y - points[p1].y;
+    edges[eNumber].b1 = points[p1].x - points[p2].x;
+    edges[eNumber].c1 = points[p2].x*points[p1].y - points[p1].x*points[p2].y;
+    if(edges[eNumber].a1 < 0) {
+        edges[eNumber].a1 *= -1;
+        edges[eNumber].b1 *= -1;
+        edges[eNumber].c1 *= -1;
     }
     points[p1].iEdges[points[p1].iN++] = eNumber;
     points[p2].dEdges[points[p2].dN++] = eNumber;
@@ -119,13 +129,17 @@ void AddEdge(int p1, int p2, int tiangle)
 }
 void Read()
 {
+    mapTree.clear();
     isIntersection = false;
     maxLevel = 0, pNumber = 0, eNumber = 0, veNumber = 0;
     for(int i = 0; i < triangleN; i++){
         for(int j = 0; j < 3; j++) {
             scanf("%lf%lf", &points[pNumber].x, &points[pNumber].y);
-            points[pNumber].tirangle = i;
+            points[pNumber].triangle = i;
             points[pNumber].iN = 0, points[pNumber].dN = 0;
+            sortedIndex[pNumber].x = points[pNumber].x;
+            sortedIndex[pNumber].y = points[pNumber].y;
+            sortedIndex[pNumber].index = pNumber;
             pNumber++;
         }
         AddEdge(pNumber-1, pNumber-2, i);
@@ -145,6 +159,59 @@ int cmp(const void* a, const void* b)
     else if (ap->x > bp->x) return 1;
     else return -1;
 }
+void ShowTree()
+{
+    printf("---Map:\n");
+    if(mapTree.empty()) {
+        printf("Empty\n");
+        return;
+    }
+    for(ITER it = mapTree.begin(); it != mapTree.end(); ++it )
+    {
+        printf("Triangle: %d, (%.2lf, %.2lf) -> (%.2lf, %.2lf)\n", it->first.triangle, points[it->first.lPoint].x, points[it->first.lPoint].y, points[it->first.rPoint].x, points[it->first.rPoint].y);
+    }
+}
+int CheckOnSide(Edge line, Point pt)
+{
+    double l1 = sqrt((line.x1-pt.x)*(line.x1-pt.x) + (line.y1-pt.y)*(line.y1-pt.y));
+    double l2 = sqrt((line.x2-pt.x)*(line.x2-pt.x) + (line.y2-pt.y)*(line.y2-pt.y));
+    double l3 = sqrt((line.x2-line.x1)*(line.x2-line.x1) + (line.y2-line.y1)*(line.y2-line.y1));
+    #ifdef DBUGM_Inters
+       printf("Check on Side: %05.2lf + %05.2lf - %05.2lf = %05.2lf: %d\n", l1, l2, l3, fabs(l1 + l2 - l3), fabs(l1 + l2 - l3) < errorT);
+    #endif
+    if(fabs(l1 + l2 - l3) < errorT) return 1;
+    else return 0;
+}
+int FindIntersection(Edge edgeA, Edge edgeB)
+{
+    if(edgeA.triangle == edgeB.triangle) return 0;
+    #ifdef DBUGM_Inters
+        printf("\nFindIntersection %2.2lf\n", fabs(((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1))));
+    #endif
+    /*Same Slope*/
+    if( fabs((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1)) < errorT ){
+        if(CheckOnSide(edgeA, points[edgeB.lPoint])) return 1;
+        if(CheckOnSide(edgeA, points[edgeB.rPoint])) return 1;
+        if(CheckOnSide(edgeB, points[edgeA.lPoint])) return 1;
+        if(CheckOnSide(edgeB, points[edgeA.rPoint])) return 1;
+        return 0;
+    }
+
+    /*Compute the proportion from edgeA->P1 to the intersection*/
+    /*ua = ((x4 - x3)(y1 - y3) - (y4-y3)(x1-x3)) / ((y4 - y3)(x2 - x1) - (x4 - x3)(y2 - y1))*/
+    double ppB = ((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / ((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
+    double ppA = ((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / ((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
+    #ifdef DBUGM_Inters
+        printf("ppA, ppB: %2.2lf %2.2lf\n", ppA, ppB);
+    #endif
+    if(ppB > 1-errorT || ppB < 0+errorT || ppA > 1-errorT || ppA < 0+errorT) return 0;
+    else {
+        #ifdef DBUGM_Inters
+            printf("---Ture! \n");
+        #endif
+        return 1;
+    }
+}
 int main()
 {
      #ifndef ONLINE_JUDGE
@@ -161,21 +228,76 @@ int main()
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         /*Check Vertical Line Crossing*/
-        qsort(points, pNumber, sizeof(Point), cmp);
-        for(i = 0; i < pNumber; i++){
+        for(i = 0; i < veNumber && !isIntersection; i++){
+            for(j = 0; j < eNumber && !isIntersection; j++){
+                if(FindIntersection(verticalE[i], edges[j]) == 1) isIntersection = true;
+            }
+        }
+        qsort(sortedIndex, pNumber, sizeof(Index), cmp);
+        #ifdef DBUGM
+            printf("Sorted: %d\n", pNumber);
+            for(i = 0; i < pNumber; i++){
+                printf("(%lf, %lf)\n", points[sortedIndex[i].index].x, points[sortedIndex[i].index].y);
+            }
+        #endif
+
+        for(i = 0; i < pNumber && !isIntersection; i++){
             /*Insert*/
-            for(j = 0; j < points[i].iN; i++){
-                std::pair<map<Edge, int, mySort>::iterator, bool> res = mapTree.insert(std::make_pair(edges[points[i].iEdges[j]], 0));
+            #ifdef DBUGM
+                 printf("\n---Point: (%lf, %lf)\n", points[sortedIndex[i].index].x, points[sortedIndex[i].index].y);
+            #endif
+
+            for(j = 0; j < points[sortedIndex[i].index].iN && !isIntersection; j++){
+                #ifdef DBUGM
+                    printf("Insert %d/%d: %d\n", j, points[sortedIndex[i].index].iN, points[sortedIndex[i].index].iEdges[j]);
+                #endif
+                pair<ITER, bool> iter = mapTree.insert(make_pair( edges[points[sortedIndex[i].index].iEdges[j]], 0));
+                /*Check intersection*/
+                ITER itp = mapTree.find( edges[points[sortedIndex[i].index].iEdges[j]] );
+                if(itp == mapTree.end()) printf("-- I Not Found\n");
+                ITER itn = mapTree.find( edges[points[sortedIndex[i].index].iEdges[j]] );
+                itp--, itn++;
+                if(itp != mapTree.begin()){
+                    if(FindIntersection(itp->first, edges[points[sortedIndex[i].index].iEdges[j]]) == 1) isIntersection = true;
+                }
+                if(itn != mapTree.end())
+                    if(FindIntersection(itn->first, edges[points[sortedIndex[i].index].iEdges[j]]) == 1) isIntersection = true;
+                /*Update Level*/
+                if(itp != mapTree.begin() && itn != mapTree.end()){
+                    if( itp->first.triangle == itn->first.triangle) iter.first->second = itn->second+1;
+                    else iter.first->second = itn->second;
+                }
+                else {
+                    iter.first->second = 1;
+                }
+                if(iter.first->second > maxLevel) maxLevel = iter.first->second;
             }
             /*Delete*/
+            for(j = 0; j < points[sortedIndex[i].index].dN && !isIntersection; j++){
+                #ifdef DBUGM
+                    printf("Delete %d/%d: %d\n", j, points[sortedIndex[i].index].dN, points[sortedIndex[i].index].dEdges[j]);
+                    printf("Triangle: %d, (%.2lf, %.2lf) -> (%.2lf, %.2lf)\n", edges[points[sortedIndex[i].index].dEdges[j]].triangle, points[edges[points[sortedIndex[i].index].dEdges[j]].lPoint].x, points[edges[points[sortedIndex[i].index].dEdges[j]].lPoint].y, points[edges[points[sortedIndex[i].index].dEdges[j]].rPoint].x, points[edges[points[sortedIndex[i].index].dEdges[j]].rPoint].y);
+                #endif
+                ITER itp = mapTree.find( edges[points[sortedIndex[i].index].dEdges[j]] );
+                ITER itn = mapTree.find( edges[points[sortedIndex[i].index].dEdges[j]] );
+                itp--, itn++;
+                if(itp != mapTree.begin() && itn != mapTree.end())
+                    if(FindIntersection(itp->first, itn->first) == 1) isIntersection = true;
+
+                ITER it = mapTree.find( edges[points[sortedIndex[i].index].dEdges[j]] );
+                if(it != mapTree.end())  mapTree.erase(it);
+                else printf("-- Not Found\n");
+            }
             #ifdef DBUGM
+                printf("Point %d Done\n", i);
                 ShowTree();
             #endif
         }
-
+        #ifdef DBUGM
+            //ShowTree();
+        #endif
         if(isIntersection) printf("Case 1: ERROR\n", caseNumber);
-        else printf("Case 1: %d shades\n", caseNumber, maxLevel);
-
+        else printf("Case %d: %d shades\n", caseNumber, maxLevel);
         caseNumber++;
     }
     return 0;
