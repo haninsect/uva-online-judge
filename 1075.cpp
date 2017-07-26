@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <map>
 #define DBUGM
 #define LargeINT 1000000000
 #define errorT 0.000001
@@ -45,6 +46,7 @@ struct Edge {
     };
     equation eqt;
 };
+
 int  triangleN;
 Point points[MaxTriangle];
 int pNumber;
@@ -54,6 +56,32 @@ Edge verticalE[MaxTriangle*3];
 int veNumber;
 bool isIntersection;
 int maxLevel;
+
+struct  mySort
+{
+   bool operator() (const Edge &edgeA, const Edge &edgeB) const
+   {
+      if(edgeA.tirangle == edgeB.tirangle){
+        double midA, midB;
+        midA = (points[edgeA.lPoint].y + points[edgeA.rPoint].y)/2;
+        midB = (points[edgeB.lPoint].y + points[edgeB.rPoint].y)/2;
+        if(midA < midB) return true;
+        else return false;
+      }
+      else {
+        if(points[edgeA.lPoint].x > points[edgeB.lPoint].x) {
+            if(edgeB.eqt.Upper(points[edgeA.lPoint]) == 1) return true;
+            else return false;
+        }
+        else {
+            if(edgeA.eqt.Upper(points[edgeB.lPoint]) == 1) return false;
+            else return true;
+        }
+      }
+   }
+};
+map<Edge, int, mySort> mapTree;
+
 void AddEdge(int p1, int p2, int tiangle)
 {
     if(fabs(points[p1].x - points[p2].x) < errorT) {/*Vertical Line*/
@@ -105,22 +133,48 @@ void Read()
         AddEdge(pNumber-2, pNumber-3, i);
     }
 }
+int cmp(const void* a, const void* b)
+{
+    Point *ap = (Point*)a;
+    Point *bp = (Point*)b;
+    if(fabs(ap->x - bp->x) < errorT){
+        if(fabs(ap->y - bp->y) < errorT) return 0;
+        else if (ap->y > bp->y) return 1;
+        else return -1;
+    }
+    else if (ap->x > bp->x) return 1;
+    else return -1;
+}
 int main()
 {
      #ifndef ONLINE_JUDGE
-		//freopen("input.in", "r", stdin);
+		freopen("input.in", "r", stdin);
 		//freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
     while(1){
         scanf("%d", &triangleN);
-        if(triangleN == 0) break;
+        if(triangleN == -1) break;
+        Read();
         #ifdef DBUGM
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
+        /*Check Vertical Line Crossing*/
+        qsort(points, pNumber, sizeof(Point), cmp);
+        for(i = 0; i < pNumber; i++){
+            /*Insert*/
+            for(j = 0; j < points[i].iN; i++){
+                std::pair<map<Edge, int, mySort>::iterator, bool> res = mapTree.insert(std::make_pair(edges[points[i].iEdges[j]], 0));
+            }
+            /*Delete*/
+            #ifdef DBUGM
+                ShowTree();
+            #endif
+        }
+
         if(isIntersection) printf("Case 1: ERROR\n", caseNumber);
-        else printf("Case 1: 5 shades\n", caseNumber, maxLevel);
+        else printf("Case 1: %d shades\n", caseNumber, maxLevel);
 
         caseNumber++;
     }
