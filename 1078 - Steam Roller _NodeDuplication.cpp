@@ -3,19 +3,37 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <map>
 #define DBUGM1
 #define LargeINT 1000000000
 #define errorT 0.000001
 #define M_PI 3.14159265358979323846
 #define MaxSize 105
 #define MaxNode 1005
+using namespace std;
 int row, col, sx, sy, ex, ey;
 int gEdge[MaxSize*MaxSize][MaxSize*MaxSize];
-typedef struct {
+struct Node{
+    int key;
     int index;
     int dir, mul;
-} Node;
-
+    explicit Node(int k,int i, int d, int m) : key(k), index(i), dir(d), mul(m) {}
+};
+struct my_sort {
+    bool operator()(Node const& a, Node const& b) const {
+        if(a.key == b.key){
+            if(a.index == b.index){
+                if(a.dir == b.dir) {
+                    return a.mul < b.mul;
+                }
+                else return a.dir < b.dir;
+            }
+            else return a.index < b.index;
+        }
+        else return a.key < b.key;
+    }
+};
+typedef map<Node, int, my_sort>::iterator ITER;
 void Read()
 {
     int i, j;
@@ -47,13 +65,24 @@ int FindNeighbor(int index, int dir)
     if(r < 0 || r >= row*col) return -1;
     else return r;
 }
+void ShowTree(map<Node, int, my_sort> data)
+{
+    printf("---Map:\n");
+    if(data.empty()) {
+        printf("Tree Empty\n");
+        return;
+    }
+    for(ITER itn = data.begin(); itn != data.end(); ++itn )
+    {
+        printf("(%d, %d, %d), key: %d\n", itn->first.index, itn->first.dir, itn->first.mul, itn->first.key);
+    }
+}
 int Dijkstra()
 {
-
+    map<Node, int, my_sort> data;
     int i, j, k, l;
-    int valid[MaxSize*MaxSize][4][2];
-    int inQueue[MaxSize*MaxSize][4][2] = {0};
     int key[MaxSize*MaxSize][4][2];
+    int valid[MaxSize*MaxSize][4][2];
     for(i = 0; i < MaxSize*MaxSize; i++){
         for(j = 0; j < 4; j++){
             key[i][j][0] = LargeINT;
@@ -62,67 +91,49 @@ int Dijkstra()
             valid[i][j][1] = 1;
         }
     }
-    Node queue[MaxNode];
-    int qp = 0, qs = 0;
     for(j = 0; j < 4; j++){
         key[(sx-1)*col+(sy-1)][j][1] = 0;
-        inQueue[(sx-1)*col+(sy-1)][j][1] = 1;
-        queue[qs].index = (sx-1)*col+(sy-1);
-        queue[qs].dir = j;
-        queue[qs].mul = 1;
-        qs++;
+        data.insert(make_pair(Node(0 , (sx-1)*col+(sy-1), j, 1), 0));
     }
     int min = LargeINT;
     while(1){
-        Node deQ;
-        int qn;
-        min = LargeINT;
-        for(i = qp; i != qs; i = (i+1)%MaxNode){
-            if(key[queue[i].index][queue[i].dir][queue[i].mul] < min && valid[queue[i].index][queue[i].dir][queue[i].mul] == 1){
-                min = key[queue[i].index][queue[i].dir][queue[i].mul];
-                deQ.index = queue[i].index;
-                deQ.dir = queue[i].dir;
-                deQ.mul = queue[i].mul;
-                qn = i;
-            }
-        }
-        if(min == LargeINT) break;
-        valid[deQ.index][deQ.dir][deQ.mul] = 0;
-        for(i = qn; i != qs; i = (i+1)%MaxNode){
-            queue[i].index = queue[(i+1)%MaxNode].index;
-            queue[i].dir = queue[(i+1)%MaxNode].dir;
-            queue[i].mul = queue[(i+1)%MaxNode].mul;
-        }
-        qs = (qs - 1 + MaxNode)%MaxNode;
-        int nb = FindNeighbor(deQ.index, deQ.dir);
+        ITER itn = data.begin();
+        if(itn == data.end()) break;
+        int nb = FindNeighbor(itn->first.index, itn->first.dir);
         #ifdef DBUGM
-            printf("DeQ: (%d, %d, %d), min: %d\n", deQ.index, deQ.dir, deQ.mul, min);
+            printf("DeQ: (%d, %d, %d), min: %d\n", itn->first.index, itn->first.dir, itn->first.mul, itn->first.key);
             printf("Neighbor: %d\n", nb);
         #endif
-        if(deQ.index == (ex-1)*col+(ey-1)) break;
-        if(nb == -1) continue;
-        if(gEdge[deQ.index][nb] > 0){
+        if(itn->first.index == (ex-1)*col+(ey-1)) {
+            min = itn->first.key;
+            break;
+        };
+        valid[itn->first.index][itn->first.dir][itn->first.mul] = 0;
+        if(nb == -1) {
+            data.erase(itn);
+            continue;
+        }
+        if(gEdge[itn->first.index][nb] > 0){
             for(j = 0; j < 4; j++){
-                if(j == deQ.dir) k = 0;
+                if(j == itn->first.dir) k = 0;
                 else k = 1;
                 if(valid[nb][j][k] == 0) continue;
                 int acc = 1;
-                if(k == 1 || deQ.mul == 1 || nb == (ex-1)*col+(ey-1)) acc = 2;
-                if(key[deQ.index][deQ.dir][deQ.mul] + gEdge[deQ.index][nb]*(acc) < key[nb][j][k]){
-                    key[nb][j][k] = key[deQ.index][deQ.dir][deQ.mul] + gEdge[deQ.index][nb]*(acc);
-                    if(inQueue[nb][j][k] == 0){
-                        inQueue[nb][j][k] = 1;
-                        queue[qs].index = nb;
-                        queue[qs].dir = j;
-                        queue[qs].mul = k;
-                        qs++;
-                    }
+                if(k == 1 || itn->first.mul == 1 || nb == (ex-1)*col+(ey-1)) acc = 2;
+                if(itn->first.key + gEdge[itn->first.index][nb]*(acc) < key[nb][j][k]){
+                    data.erase( Node(key[nb][j][k] , nb, j, k) );
+                    key[nb][j][k] = itn->first.key + gEdge[itn->first.index][nb]*(acc);
+                    data.insert( make_pair(Node(key[nb][j][k] , nb, j, k), 0) );
                 }
             }
         }
+        data.erase(itn);
+        #ifdef DBUGM
+            ShowTree(data);
+        #endif
+
     }
     /*Return length*/
-
     if(min == LargeINT) return -1;
     else return min;
 }
@@ -130,7 +141,7 @@ int main()
 {
     #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		//freopen("output.out", "w", stdout);
+		freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
