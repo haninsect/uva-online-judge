@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <map>
-#define DBUGM
-#define DBUGM_Inters
+#define DBUGM1
+#define DBUGM_Inters1
 #define LargeINT 1000000000
 #define errorT 0.0000001
 #define M_PI 3.14159265358979323846
@@ -48,12 +48,23 @@ void ShowEdge(Edge edgeA)
 {
     printf("Triangle: %d, (%.2lf, %.2lf) -> (%.2lf, %.2lf)\n", edgeA.triangle, points[edgeA.lPoint].x, points[edgeA.lPoint].y, points[edgeA.rPoint].x, points[edgeA.rPoint].y);
 }
+int CheckOnSide(Edge line, Point pt)
+{
+    double l1 = sqrt((line.x1-pt.x)*(line.x1-pt.x) + (line.y1-pt.y)*(line.y1-pt.y));
+    double l2 = sqrt((line.x2-pt.x)*(line.x2-pt.x) + (line.y2-pt.y)*(line.y2-pt.y));
+    double l3 = sqrt((line.x2-line.x1)*(line.x2-line.x1) + (line.y2-line.y1)*(line.y2-line.y1));
+    #ifdef DBUGM_Inters
+       printf("Check on Side: %05.2lf + %05.2lf - %05.2lf = %05.2lf: %d\n", l1, l2, l3, fabs(l1 + l2 - l3), fabs(l1 + l2 - l3) < errorT);
+    #endif
+    if(fabs(l1 + l2 - l3) < errorT) return 1;
+    else return 0;
+}
 int Upper(const Point& p, const Edge& e)
 {
     /*ShowEdge(e);
     printf("P %lf %lf\n", p.x, p.y);*/
     if(fabs(e.a1*p.x + e.b1*p.y + e.c1 - 0) < errorT) {
-        isIntersection = true;
+        if(CheckOnSide(e, p)) isIntersection = true;
     };
     if(fabs(e.b1 - 0) < errorT) {
         if(p.y > e.y2+errorT) return 1;
@@ -92,10 +103,9 @@ struct  mySort
         midB = (points[edgeB.lPoint].y + points[edgeB.rPoint].y)/2;
         /*printf("(%lf, %lf) ", midA, midB);*/
         if(fabs(midA - midB) < errorT){
-            return true;
             double midA2 = (points[edgeA.lPoint].x + points[edgeA.rPoint].x)/2;
             double midB2 = (points[edgeB.lPoint].x + points[edgeB.rPoint].x)/2;
-            if(midA < midB-errorT) return true;
+            if(midA2 < midB2-errorT) return true;
             else return false;
         }
         else {
@@ -217,17 +227,7 @@ void ShowTree()
         printf("Triangle: %d, (%.2lf, %.2lf) -> (%.2lf, %.2lf) level: %d\n", it->first.triangle, points[it->first.lPoint].x, points[it->first.lPoint].y, points[it->first.rPoint].x, points[it->first.rPoint].y, it->second);
     }
 }
-int CheckOnSide(Edge line, Point pt)
-{
-    double l1 = sqrt((line.x1-pt.x)*(line.x1-pt.x) + (line.y1-pt.y)*(line.y1-pt.y));
-    double l2 = sqrt((line.x2-pt.x)*(line.x2-pt.x) + (line.y2-pt.y)*(line.y2-pt.y));
-    double l3 = sqrt((line.x2-line.x1)*(line.x2-line.x1) + (line.y2-line.y1)*(line.y2-line.y1));
-    #ifdef DBUGM_Inters
-       printf("Check on Side: %05.2lf + %05.2lf - %05.2lf = %05.2lf: %d\n", l1, l2, l3, fabs(l1 + l2 - l3), fabs(l1 + l2 - l3) < errorT);
-    #endif
-    if(fabs(l1 + l2 - l3) < errorT) return 1;
-    else return 0;
-}
+
 int FindIntersection(Edge edgeA, Edge edgeB)
 {
     if(edgeA.triangle == edgeB.triangle) return 0;
@@ -250,7 +250,7 @@ int FindIntersection(Edge edgeA, Edge edgeB)
     double ppB = ((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / ((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
     double ppA = ((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / ((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
     #ifdef DBUGM_Inters
-        printf("ppA, ppB: %2.2lf %2.2lf, %d\n", ppA, ppB, ppB > 1+errorT);
+        printf("ppA, ppB: %2.2lf %2.2lf, %d\n", ppA, ppB, ppB < 0-errorT);
     #endif
     if(ppB > 1+errorT || ppB < 0-errorT || ppA > 1+errorT || ppA < 0-errorT) return 0;
     else {
@@ -301,7 +301,7 @@ int main()
 {
      #ifndef ONLINE_JUDGE
 		freopen("input.in", "r", stdin);
-		freopen("output.out", "w", stdout);
+		//freopen("output.out", "w", stdout);
 	#endif
     int i, j, k;
     int caseNumber = 1;
@@ -369,7 +369,7 @@ int main()
                 #ifdef DBUGM
                     printf("Insert Done\n");
                     ShowTree();
-                    printf("ano\n");
+                    printf("---\n");
                 #endif
                 /*Check intersection*/
                 ITER itp = mapTree.find( edges[points[sortedIndex[i].index].iEdges[j]] );
