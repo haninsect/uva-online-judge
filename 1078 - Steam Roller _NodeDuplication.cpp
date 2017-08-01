@@ -37,11 +37,11 @@ typedef map<Node, int, my_sort>::iterator ITER;
 void Read()
 {
     int i, j;
-    for(i = 0; i < MaxSize; i++){
-        for(j = 0; j < MaxSize; j++){
+    for(i = 0; i < MaxSize*MaxSize; i++){
+        for(j = 0; j < MaxSize*MaxSize; j++){
             gEdge[i][j] = 0;
         }
-    }
+    }    
     for(i = 0; i < row*2-1; i++){
         int tmpc = col;
         if(i%2 == 0) tmpc = col-1;
@@ -82,6 +82,7 @@ int Dijkstra()
     map<Node, int, my_sort> data;
     int i, j, k, l;
     int key[MaxSize*MaxSize][4][2];
+    int parent[MaxSize*MaxSize][4][2];
     int valid[MaxSize*MaxSize][4][2];
     for(i = 0; i < MaxSize*MaxSize; i++){
         for(j = 0; j < 4; j++){
@@ -89,6 +90,8 @@ int Dijkstra()
             key[i][j][1] = LargeINT;
             valid[i][j][0] = 1;
             valid[i][j][1] = 1;
+            parent[i][j][0] = -1;
+            parent[i][j][1] = -1;
         }
     }
     for(j = 0; j < 4; j++){
@@ -103,11 +106,7 @@ int Dijkstra()
         #ifdef DBUGM
             printf("DeQ: (%d, %d, %d), min: %d\n", itn->first.index, itn->first.dir, itn->first.mul, itn->first.key);
             printf("Neighbor: %d\n", nb);
-        #endif
-        if(itn->first.index == (ex-1)*col+(ey-1)) {
-            min = itn->first.key;
-            break;
-        };
+        #endif        
         valid[itn->first.index][itn->first.dir][itn->first.mul] = 0;
         if(nb == -1) {
             data.erase(itn);
@@ -119,10 +118,18 @@ int Dijkstra()
                 else k = 1;
                 if(valid[nb][j][k] == 0) continue;
                 int acc = 1;
-                if(k == 1 || itn->first.mul == 1 || nb == (ex-1)*col+(ey-1)) acc = 2;
+                if(k == 1 || itn->first.mul == 1) acc = 2;
                 if(itn->first.key + gEdge[itn->first.index][nb]*(acc) < key[nb][j][k]){
                     data.erase( Node(key[nb][j][k] , nb, j, k) );
                     key[nb][j][k] = itn->first.key + gEdge[itn->first.index][nb]*(acc);
+                    if(nb == (ex-1)*col+(ey-1)) {
+                        int tmp = key[nb][j][k];
+                        if(acc == 1) tmp += gEdge[itn->first.index][nb];
+                        if(min > tmp){
+                            min = tmp;
+                        }
+                    };
+                    parent[nb][j][k] = itn->first.index;
                     data.insert( make_pair(Node(key[nb][j][k] , nb, j, k), 0) );
                 }
             }
@@ -133,9 +140,10 @@ int Dijkstra()
         #endif
 
     }
-    /*Return length*/
+    /*Return length*/    
     if(min == LargeINT) return -1;
     else return min;
+
 }
 int main()
 {
