@@ -5,7 +5,7 @@
 #include <math.h>
 #include <map>
 #define DBUGM
-#define DBUGM_Inters1
+#define DBUGM_Inters
 #define LargeINT 1000000000
 #define errorT 0.0000001
 #define M_PI 3.14159265358979323846
@@ -50,9 +50,16 @@ void ShowEdge(Edge edgeA)
 }
 int Upper(const Point& p, const Edge& e)
 {
-    ShowEdge(e);
-    printf("P %lf %lf\n", p.x, p.y);
-    if(fabs(e.b1 - 0) < errorT) return -1;
+    /*ShowEdge(e);
+    printf("P %lf %lf\n", p.x, p.y);*/
+    if(fabs(e.a1*p.x + e.b1*p.y + e.c1 - 0) < errorT) {
+        isIntersection = true;
+    };
+    if(fabs(e.b1 - 0) < errorT) {
+        if(p.y > e.y2+errorT) return 1;
+        else if(p.y < e.y1-errorT) return 0;
+        else return -1;
+    };
     if(fabs(e.a1 - 0) < errorT) {
         if (fabs(e.b1*p.y + e.c1 - 0) < errorT) return -1;
         else if(e.b1*p.y + e.c1 > 0) return 1;
@@ -84,20 +91,30 @@ struct  mySort
         midA = (points[edgeA.lPoint].y + points[edgeA.rPoint].y)/2;
         midB = (points[edgeB.lPoint].y + points[edgeB.rPoint].y)/2;
         /*printf("(%lf, %lf) ", midA, midB);*/
-        if(midA > midB+errorT) return true;
-        else return false;
+        if(fabs(midA - midB) < errorT){
+            return true;
+            double midA2 = (points[edgeA.lPoint].x + points[edgeA.rPoint].x)/2;
+            double midB2 = (points[edgeB.lPoint].x + points[edgeB.rPoint].x)/2;
+            if(midA < midB-errorT) return true;
+            else return false;
+        }
+        else {
+            if(midA > midB+errorT) return true;
+            else return false;
+        }
+
       }
       else {
         if(points[edgeA.lPoint].x > points[edgeB.lPoint].x) {
             if(Upper(points[edgeA.lPoint], edgeB) == 1) {
-                    printf("YEs - up\n");
+                   /* printf("YEs - up\n");*/
                 return true;
             }
             else return false;
         }
         else {
             if(Upper(points[edgeB.lPoint], edgeA) != 0 ) {
-                    printf("YEs - lower\n");
+                    /*printf("YEs - lower\n");*/
                 return false;
             }
             else return true;
@@ -114,15 +131,22 @@ void AddEdge(int p1, int p2, int triangle)
             AddEdge(p2, p1, triangle);
             return;
         }
-        verticalE[veNumber].triangle = triangle;
-        verticalE[veNumber].lPoint = p1;
-        verticalE[veNumber].rPoint = p2;
-        verticalE[veNumber].x1 = points[p1].x, verticalE[veNumber].y1 = points[p1].y;
-        verticalE[veNumber].x2 = points[p2].x, verticalE[veNumber].y2 = points[p2].y;
-        verticalE[veNumber].a1 = 1;
-        verticalE[veNumber].b1 = 0;
-        verticalE[veNumber].c1 = -points[p1].x;
-        veNumber++;
+        edges[eNumber].triangle = triangle;
+        edges[eNumber].lPoint = p1;
+        edges[eNumber].rPoint = p2;
+        edges[eNumber].x1 = points[p1].x, edges[eNumber].y1 = points[p1].y;
+        edges[eNumber].x2 = points[p2].x, edges[eNumber].y2 = points[p2].y;
+        edges[eNumber].a1 = 1;
+        edges[eNumber].b1 = 0;
+        edges[eNumber].c1 = -points[p1].x;
+        if(edges[eNumber].a1 < 0 || (fabs(edges[eNumber].a1 - 0) < errorT && edges[eNumber].b1 < 0) ) {
+            edges[eNumber].a1 *= -1;
+            edges[eNumber].b1 *= -1;
+            edges[eNumber].c1 *= -1;
+        }
+        points[p1].iEdges[points[p1].iN++] = eNumber;
+        points[p2].dEdges[points[p2].dN++] = eNumber;
+        eNumber++;
         return;
     }
     if(points[p1].x > points[p2].x + errorT) {
@@ -226,7 +250,7 @@ int FindIntersection(Edge edgeA, Edge edgeB)
     double ppB = ((edgeA.x2 - edgeA.x1)*(edgeB.y1 - edgeA.y1) - (edgeA.y2 - edgeA.y1)*(edgeB.x1 - edgeA.x1)) / ((edgeA.y2 - edgeA.y1)*(edgeB.x2 - edgeB.x1) - (edgeA.x2 - edgeA.x1)*(edgeB.y2 - edgeB.y1));
     double ppA = ((edgeB.x2 - edgeB.x1)*(edgeA.y1 - edgeB.y1) - (edgeB.y2 - edgeB.y1)*(edgeA.x1 - edgeB.x1)) / ((edgeB.y2 - edgeB.y1)*(edgeA.x2 - edgeA.x1) - (edgeB.x2 - edgeB.x1)*(edgeA.y2 - edgeA.y1));
     #ifdef DBUGM_Inters
-        printf("ppA, ppB: %2.2lf %2.2lf\n", ppA, ppB);
+        printf("ppA, ppB: %2.2lf %2.2lf, %d\n", ppA, ppB, ppB > 1+errorT);
     #endif
     if(ppB > 1+errorT || ppB < 0-errorT || ppA > 1+errorT || ppA < 0-errorT) return 0;
     else {
@@ -235,6 +259,43 @@ int FindIntersection(Edge edgeA, Edge edgeB)
         #endif
         return 1;
     }
+}
+void EdgeCopy(Edge *A, Edge B)
+{
+    A->a1 = B.a1;
+    A->b1 = B.b1;
+    A->c1 = B.c1;
+    A->lPoint = B.lPoint;
+    A->rPoint = B.rPoint;
+    A->triangle = B.triangle;
+    A->x1 = B.x1;
+    A->x2 = B.x2;
+    A->y1 = B.y1;
+    A->y2 = B.y2;
+}
+int cmpEdge2(const void* a, const void* b)
+{
+    Edge *ap = (Edge*)a;
+    Edge *bp = (Edge*)b;
+    if(fabs(ap->x1 - bp->x1) < errorT){
+        if(fabs(ap->y1 - bp->y1) < errorT) return 0;
+        else if (ap->y1 > bp->y1) return -1;
+        else return 1;
+    }
+    else if (ap->x1 > bp->x1) return -1;
+    else return 1;
+}
+int cmpEdge(const void* a, const void* b)
+{
+    Edge *ap = (Edge*)a;
+    Edge *bp = (Edge*)b;
+    if(fabs(ap->x1 - bp->x1) < errorT){
+        if(fabs(ap->y1 - bp->y1) < errorT) return 0;
+        else if (ap->y1 > bp->y1) return 1;
+        else return -1;
+    }
+    else if (ap->x1 > bp->x1) return 1;
+    else return -1;
 }
 int main()
 {
@@ -252,12 +313,23 @@ int main()
             printf("----------- Debug Message %d-----------\n", caseNumber);
         #endif
         /*Check Vertical Line Crossing*/
+        /*Edge sortV[veNumber];*/
+        /*printf("%d %d\n", veNumber, eNumber);*/
+        /*for(i = 0; i < veNumber; i++) EdgeCopy(&sortV[i], verticalE[i]);
+        qsort(sortV, veNumber, sizeof(Edge), cmpEdge2);
+
+        Edge sortE[eNumber];
+        for(i = 0; i < eNumber; i++) EdgeCopy(&sortE[i], edges[i]);
+        qsort(sortE, eNumber, sizeof(Edge), cmpEdge);
+
         for(i = 0; i < veNumber && !isIntersection; i++){
+            if(sortE[0].x1 > sortV[i].x1+errorT) break;
             for(j = 0; j < eNumber && !isIntersection; j++){
-                if(FindIntersection(verticalE[i], edges[j]) == 1) isIntersection = true;
+                if(sortE[j].x1 > sortV[i].x1+errorT) break;
+                if(FindIntersection(sortV[i], sortE[j]) == 1) isIntersection = true;
             }
-        }
-        printf("isIntersection %d\n", isIntersection);
+        }*/
+        /*printf("isIntersection %d\n", isIntersection);*/
         qsort(sortedIndex, pNumber, sizeof(Index), cmp);
         #ifdef DBUGM
             printf("Sorted: %d\n", pNumber);
@@ -334,8 +406,8 @@ int main()
                 ShowTree();
             #endif
         }
-        if(isIntersection) printf("Case 1: ERROR\n", caseNumber);
-        else printf("Case %d: %d shades\n", caseNumber, maxLevel);
+        if(isIntersection) printf("Case %d: ERROR\n", caseNumber);
+        else printf("Case %d: %d shades\n", caseNumber, maxLevel+1);
         caseNumber++;
     }
     return 0;
