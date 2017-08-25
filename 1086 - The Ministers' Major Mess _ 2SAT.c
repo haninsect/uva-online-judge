@@ -128,13 +128,14 @@ int main()
             printf("Case %d: ", caseNumber);
             for(i = 1; i <= bills; i++){
                 int ans = 0;
+                int tmp = graph[i][i+bills];
                 graph[i][i+bills] = 1; /* Xi' -> Xi*/
                 if(Solve()) ans += 1;
-                graph[i][i+bills] = 0;
-
+                graph[i][i+bills] = tmp;
+                tmp = graph[i+bills][i];
                 graph[i+bills][i] = 1; /* Xi -> Xi'*/
                 if(Solve()) ans += 2;
-                graph[i+bills][i] = 0;
+                graph[i+bills][i] = tmp;
                 printf("%c", result[ans]);
             }
             printf("\n");
